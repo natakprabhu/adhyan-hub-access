@@ -63,6 +63,14 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
+			colors: {
+				// ... keep existing code (existing colors)
+				seat: {
+					available: 'hsl(var(--seat-available))',
+					occupied: 'hsl(var(--seat-occupied))',
+					waitlisted: 'hsl(var(--seat-waitlisted))'
+				}
+			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',

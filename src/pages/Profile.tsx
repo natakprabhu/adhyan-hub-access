@@ -1,0 +1,358 @@
+import { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { User, Phone, Mail, MessageCircle, Calendar, Clock, MapPin, Edit } from 'lucide-react';
+
+interface UserProfile {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  telegram_id?: string;
+  approved: boolean;
+}
+
+interface Transaction {
+  id: string;
+  amount: number;
+  status: string;
+  created_at: string;
+  booking: {
+    seats: {
+      seat_number: number;
+    };
+    type: string;
+    slot?: string;
+    start_time: string;
+    end_time: string;
+  };
+}
+
+export default function Profile() {
+  const { user, loading } = useAuth();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      fetchProfileData();
+    }
+  }, [user]);
+
+  const fetchProfileData = async () => {
+    try {
+      // Fetch user profile
+      const { data: profile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', user?.id)
+        .single();
+      
+      setUserProfile(profile);
+
+      // Fetch transactions
+      if (profile) {
+        const { data: transactionsData } = await supabase
+          .from('transactions')
+          .select(`
+            *,
+            bookings (
+              type,
+              slot,
+              start_time,
+              end_time,
+              seats (seat_number)
+            )
+          `)
+          .eq('user_id', profile.id)
+          .order('created_at', { ascending: false });
+
+        const formattedTransactions = (transactionsData || []).map(tx => ({
+          ...tx,
+          booking: tx.bookings
+        }));
+
+        setTransactions(formattedTransactions);
+      }
+    } catch (error) {
+      console.error('Error fetching profile data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSaving(true);
+
+    const formData = new FormData(e.currentTarget);
+    const updates = {
+      name: formData.get('name') as string,
+      phone: formData.get('phone') as string,
+      telegram_id: formData.get('telegram_id') as string,
+    };
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', userProfile?.id);
+
+      if (error) throw error;
+
+      setUserProfile(prev => prev ? { ...prev, ...updates } : null);
+      setIsEditing(false);
+      
+      toast({
+        title: 'Success',
+        description: 'Profile updated successfully.',
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update profile. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  if (loading || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'failed': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background p-4 space-y-6">
+      <header className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-primary">Profile</h1>
+          <p className="text-muted-foreground">Manage your account and view history</p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={handleSignOut}>
+          Sign Out
+        </Button>
+      </header>
+
+      {/* Account Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Account Status</span>
+            <Badge variant={userProfile?.approved ? 'default' : 'secondary'}>
+              {userProfile?.approved ? 'Approved' : 'Pending Approval'}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        {!userProfile?.approved && (
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Your account is pending admin approval. You can browse seats but cannot make bookings yet.
+            </p>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Profile Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Personal Information
+            </span>
+            {!isEditing && (
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isEditing ? (
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  defaultValue={userProfile?.name}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  defaultValue={userProfile?.phone}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="telegram_id">Telegram ID</Label>
+                <Input
+                  id="telegram_id"
+                  name="telegram_id"
+                  defaultValue={userProfile?.telegram_id}
+                  placeholder="@your_telegram_id"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditing(false)}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">{userProfile?.name}</p>
+                  <p className="text-sm text-muted-foreground">Full Name</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">{userProfile?.phone}</p>
+                  <p className="text-sm text-muted-foreground">Phone Number</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">{userProfile?.email}</p>
+                  <p className="text-sm text-muted-foreground">Email Address</p>
+                </div>
+              </div>
+              {userProfile?.telegram_id && (
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">{userProfile.telegram_id}</p>
+                    <p className="text-sm text-muted-foreground">Telegram ID</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Transaction History */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Transaction History
+          </CardTitle>
+          <CardDescription>
+            Your past and current bookings and payments
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {transactions.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">
+              No transactions found
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {transactions.map((transaction) => (
+                <div key={transaction.id} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">
+                          Seat {transaction.booking.seats.seat_number}
+                        </span>
+                        <Badge variant="outline">{transaction.booking.type}</Badge>
+                      </div>
+                      {transaction.booking.slot && transaction.booking.slot !== 'full' && (
+                        <p className="text-sm text-muted-foreground capitalize">
+                          {transaction.booking.slot} slot
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold">₹{transaction.amount}</p>
+                      <Badge className={getStatusColor(transaction.status)}>
+                        {transaction.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    {formatDateTime(transaction.booking.start_time)} - {formatDateTime(transaction.booking.end_time)}
+                  </div>
+                  
+                  <Separator />
+                  
+                  <p className="text-xs text-muted-foreground">
+                    Transaction Date: {formatDateTime(transaction.created_at)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
