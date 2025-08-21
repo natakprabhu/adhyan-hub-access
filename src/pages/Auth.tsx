@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -49,6 +50,26 @@ export default function Auth() {
     setIsLoading(false);
   };
 
+  const handleGoogleAuth = async () => {
+    setIsLoading(true);
+    
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+    }
+  };
+
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -81,8 +102,8 @@ export default function Auth() {
       });
     } else {
       toast({
-        title: 'Success',
-        description: 'Please check your email to confirm your account.',
+        title: 'Check Your Email',
+        description: 'Please click the confirmation link sent to your email to complete registration.',
       });
     }
 
@@ -104,103 +125,147 @@ export default function Auth() {
             </TabsList>
             
             <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    required
-                    className="h-12"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    required
-                    className="h-12"
-                  />
-                </div>
+              <div className="space-y-4">
                 <Button 
-                  type="submit" 
+                  onClick={handleGoogleAuth}
+                  variant="outline"
                   className="w-full h-12" 
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Signing In...' : 'Sign In'}
+                  Continue with Google
                 </Button>
-              </form>
+                
+                <div className="relative">
+                  <Separator className="my-4" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="bg-background px-2 text-muted-foreground text-sm">or</span>
+                  </div>
+                </div>
+                
+                <form onSubmit={handleSignIn} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      required
+                      className="h-12"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="Enter your password"
+                      required
+                      className="h-12"
+                    />
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full h-12" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Signing In...' : 'Sign In'}
+                  </Button>
+                </form>
+                
+                <div className="mt-6 p-4 bg-muted rounded-2xl">
+                  <h4 className="font-medium text-sm mb-2">Test Credentials</h4>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <div>Email: test@adhyanlibrary.com</div>
+                    <div>Password: password123</div>
+                  </div>
+                </div>
+              </div>
             </TabsContent>
             
             <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    required
-                    className="h-12"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    placeholder="Enter your phone number"
-                    required
-                    className="h-12"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    required
-                    className="h-12"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="Create a password"
-                    required
-                    className="h-12"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="telegram_id">Telegram ID (Optional)</Label>
-                  <Input
-                    id="telegram_id"
-                    name="telegram_id"
-                    type="text"
-                    placeholder="@your_telegram_id"
-                    className="h-12"
-                  />
-                </div>
+              <div className="space-y-4">
                 <Button 
-                  type="submit" 
+                  onClick={handleGoogleAuth}
+                  variant="outline"
                   className="w-full h-12" 
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Creating Account...' : 'Create Account'}
+                  Continue with Google
                 </Button>
-              </form>
+                
+                <div className="relative">
+                  <Separator className="my-4" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="bg-background px-2 text-muted-foreground text-sm">or</span>
+                  </div>
+                </div>
+                
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      type="text"
+                      placeholder="Enter your full name"
+                      required
+                      className="h-12"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      placeholder="Enter your phone number"
+                      required
+                      className="h-12"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      required
+                      className="h-12"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="Create a password"
+                      required
+                      className="h-12"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="telegram_id">Telegram ID (Optional)</Label>
+                    <Input
+                      id="telegram_id"
+                      name="telegram_id"
+                      type="text"
+                      placeholder="@your_telegram_id"
+                      className="h-12"
+                    />
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full h-12" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Creating Account...' : 'Create Account'}
+                  </Button>
+                </form>
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>
