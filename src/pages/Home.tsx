@@ -1,11 +1,25 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { BookingWizard } from '@/components/BookingWizard';
-import { Clock, MapPin, Plus, Users, Armchair } from 'lucide-react';
+import { 
+  Users, 
+  MapPin, 
+  Clock, 
+  Calendar, 
+  Wifi, 
+  Shield, 
+  Snowflake, 
+  Droplets, 
+  Volume2, 
+  Lock, 
+  Moon,
+  Armchair
+} from 'lucide-react';
 
 interface UserProfile {
   id: string;
@@ -39,6 +53,7 @@ export default function Home() {
   }, [user]);
 
   const fetchData = async () => {
+    setIsLoading(true);
     try {
       // Fetch user profile
       const { data: profile } = await supabase
@@ -49,49 +64,27 @@ export default function Home() {
       
       setUserProfile(profile);
 
-      // Fetch seat statistics
-      const { data: allSeats } = await supabase
+      // Fetch seat statistics more efficiently
+      const { data: seats } = await supabase
         .from('seats')
-        .select('id, seat_number, type');
+        .select('*');
 
-      if (allSeats) {
-        const total = allSeats.length;
-        let occupied = 0;
-        let waitlisted = 0;
+      // Check how many seats are occupied
+      const { data: bookings } = await supabase
+        .from('bookings')
+        .select('seat_id')
+        .in('status', ['confirmed', 'pending']);
 
-        // Check current occupancy
-        const today = new Date().toISOString();
-        
-        for (const seat of allSeats) {
-          // Check if seat is currently booked
-          const { data: currentBooking } = await supabase
-            .from('bookings')
-            .select('id')
-            .eq('seat_id', seat.id)
-            .eq('status', 'confirmed')
-            .lte('start_time', today)
-            .gte('end_time', today)
-            .limit(1);
+      const occupiedSeats = new Set(bookings?.map(b => b.seat_id) || []);
 
-          if (currentBooking && currentBooking.length > 0) {
-            occupied++;
-          }
+      const stats = {
+        total: seats?.length || 0,
+        available: (seats?.length || 0) - occupiedSeats.size,
+        occupied: occupiedSeats.size,
+        waitlisted: 0
+      };
 
-          // Check if seat has waitlist
-          const { data: waitlist } = await supabase
-            .from('waitlist')
-            .select('id')
-            .eq('seat_id', seat.id)
-            .limit(1);
-
-          if (waitlist && waitlist.length > 0) {
-            waitlisted++;
-          }
-        }
-
-        const available = total - occupied;
-        setSeatStats({ total, available, occupied, waitlisted });
-      }
+      setSeatStats(stats);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -116,12 +109,12 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 space-y-6">
+    <div className="min-h-screen bg-background p-4 space-y-8">
       <header className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-primary">Welcome back!</h1>
+          <h1 className="text-3xl font-bold text-primary">Welcome to Adhyan Library</h1>
           <p className="text-muted-foreground">
-            {userProfile?.name || 'Loading...'}
+            Hello, {userProfile?.name || 'Loading...'}!
           </p>
         </div>
         <Button variant="ghost" size="sm" onClick={handleSignOut}>
@@ -129,15 +122,116 @@ export default function Home() {
         </Button>
       </header>
 
-      {!userProfile?.approved && (
+      {userProfile && !userProfile.approved && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="pt-6">
             <p className="text-amber-800 text-sm">
-              Your account is pending approval. You can browse seats but cannot make bookings yet.
+              Your account is pending approval. You can browse but cannot book seats yet.
             </p>
           </CardContent>
         </Card>
       )}
+
+      {/* Pricing Plans */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold text-center">Our Plans</h2>
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card className="relative">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>12 Hour Plan</CardTitle>
+                <Badge variant="secondary">Popular</Badge>
+              </div>
+              <div className="text-3xl font-bold">₹2,300<span className="text-sm font-normal">/month</span></div>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  Choose Day (9 AM - 9 PM) or Night (9 PM - 9 AM)
+                </li>
+                <li className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  Seats 14-50 available
+                </li>
+                <li className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-primary" />
+                  Flexible timing options
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card className="relative border-primary">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>24 Hour Plan</CardTitle>
+                <Badge>Premium</Badge>
+              </div>
+              <div className="text-3xl font-bold">₹3,800<span className="text-sm font-normal">/month</span></div>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-center gap-2">
+                  <Moon className="h-4 w-4 text-primary" />
+                  24/7 access anytime
+                </li>
+                <li className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  Premium seats 1-13
+                </li>
+                <li className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-primary" />
+                  Unlimited study hours
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Library Features */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold text-center">Library Features</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <Card className="text-center p-4">
+            <Armchair className="h-8 w-8 mx-auto mb-2 text-primary" />
+            <h3 className="font-semibold text-sm">Spacious Desks</h3>
+          </Card>
+          <Card className="text-center p-4">
+            <Users className="h-8 w-8 mx-auto mb-2 text-primary" />
+            <h3 className="font-semibold text-sm">Comfortable Seats with Headrest</h3>
+          </Card>
+          <Card className="text-center p-4">
+            <Wifi className="h-8 w-8 mx-auto mb-2 text-primary" />
+            <h3 className="font-semibold text-sm">Free WiFi</h3>
+          </Card>
+          <Card className="text-center p-4">
+            <Shield className="h-8 w-8 mx-auto mb-2 text-primary" />
+            <h3 className="font-semibold text-sm">CCTV Surveillance</h3>
+          </Card>
+          <Card className="text-center p-4">
+            <Snowflake className="h-8 w-8 mx-auto mb-2 text-primary" />
+            <h3 className="font-semibold text-sm">Fully Air Conditioned</h3>
+          </Card>
+          <Card className="text-center p-4">
+            <Droplets className="h-8 w-8 mx-auto mb-2 text-primary" />
+            <h3 className="font-semibold text-sm">RO Drinking Water</h3>
+          </Card>
+          <Card className="text-center p-4">
+            <Volume2 className="h-8 w-8 mx-auto mb-2 text-primary" />
+            <h3 className="font-semibold text-sm">Peaceful Study Environment</h3>
+          </Card>
+          <Card className="text-center p-4">
+            <Lock className="h-8 w-8 mx-auto mb-2 text-primary" />
+            <h3 className="font-semibold text-sm">Locker</h3>
+          </Card>
+          <Card className="text-center p-4">
+            <Clock className="h-8 w-8 mx-auto mb-2 text-primary" />
+            <h3 className="font-semibold text-sm">24 x 7 Facility</h3>
+          </Card>
+        </div>
+      </div>
 
       {/* Seat Statistics */}
       <div className="grid grid-cols-2 gap-4">
@@ -158,55 +252,23 @@ export default function Home() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{seatStats.available}</div>
+            <div className="text-2xl font-bold text-seat-available">{seatStats.available}</div>
             <p className="text-xs text-muted-foreground">Ready to book</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Occupied</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{seatStats.occupied}</div>
-            <p className="text-xs text-muted-foreground">Currently booked</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Waitlisted</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{seatStats.waitlisted}</div>
-            <p className="text-xs text-muted-foreground">In queue</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>
-            {userProfile?.approved 
-              ? 'Book a new seat or manage your current booking'
-              : 'Browse available seats (booking requires approval)'
-            }
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button 
-            onClick={() => setShowBookingWizard(true)}
-            className="w-full h-12"
-            disabled={!userProfile?.approved}
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            {userProfile?.approved ? 'Book a Seat' : 'Request Seat (Pending Approval)'}
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="text-center">
+        <Button 
+          size="lg" 
+          onClick={() => setShowBookingWizard(true)}
+          disabled={!userProfile?.approved}
+          className="w-full"
+        >
+          <Calendar className="mr-2 h-5 w-5" />
+          Book a Seat
+        </Button>
+      </div>
 
       {showBookingWizard && (
         <BookingWizard

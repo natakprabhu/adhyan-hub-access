@@ -34,6 +34,7 @@ export default function SeatPlan() {
   }, [user]);
 
   const fetchSeatPlan = async () => {
+    setIsLoading(true);
     try {
       const { data: seatsData } = await supabase
         .from('seats')
@@ -41,21 +42,23 @@ export default function SeatPlan() {
         .order('seat_number');
 
       const seatInfos: SeatInfo[] = [];
+      const now = new Date().toISOString();
 
       for (const seat of seatsData || []) {
-        // Get current booking for today
-        const today = new Date().toISOString().split('T')[0];
-        const { data: currentBooking } = await supabase
+        // Get current active booking
+        const { data: currentBookings } = await supabase
           .from('bookings')
           .select(`
             *,
             users (name)
           `)
           .eq('seat_id', seat.id)
-          .eq('status', 'confirmed')
-          .gte('end_time', new Date().toISOString())
-          .lte('start_time', `${today}T23:59:59.999Z`)
-          .single();
+          .in('status', ['confirmed', 'pending'])
+          .lte('start_time', now)
+          .gte('end_time', now)
+          .limit(1);
+
+        const currentBooking = currentBookings?.[0];
 
         // Get waitlist count
         const { data: waitlist } = await supabase
@@ -66,7 +69,7 @@ export default function SeatPlan() {
         seatInfos.push({
           ...seat,
           currentBooking: currentBooking ? {
-            user_name: currentBooking.users.name,
+            user_name: currentBooking.users?.name || 'Unknown User',
             slot: currentBooking.slot,
             start_time: currentBooking.start_time,
             end_time: currentBooking.end_time,
@@ -143,7 +146,7 @@ export default function SeatPlan() {
             <CardTitle className="text-center">Library Seating Layout</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-5 gap-3 max-w-md mx-auto">
+            <div className="grid grid-cols-6 gap-3 max-w-2xl mx-auto">
               {seats.map((seat) => (
                 <button
                   key={seat.id}
