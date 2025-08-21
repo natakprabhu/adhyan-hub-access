@@ -277,7 +277,7 @@ export default function Profile() {
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="font-medium">{userProfile?.email}</p>
-                  <p className="text-sm text-muted-foreground">Email Address</p>
+                  <p className="text-sm text-muted-foreground">Email Address (Managed by Auth)</p>
                 </div>
               </div>
               {userProfile?.telegram_id && (
