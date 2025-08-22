@@ -105,7 +105,7 @@ export default function Home() {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return (
@@ -158,6 +158,10 @@ export default function Home() {
                   <Users className="h-4 w-4 text-primary" />
                   Flexible timing options
                 </li>
+                <li className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-primary" />
+                  <span className="underline">Permanent Locker</span>
+                </li>
               </ul>
             </CardContent>
           </Card>
@@ -183,6 +187,10 @@ export default function Home() {
                 <li className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-primary" />
                   Unlimited study hours
+                </li>
+                <li className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-primary" />
+                  Double Locker and Fixed Seat
                 </li>
               </ul>
             </CardContent>

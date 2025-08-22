@@ -23,7 +23,7 @@ export default function Auth() {
   }
 
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -113,7 +113,14 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
+        <CardHeader className="text-center space-y-4">
+          <div className="flex items-center justify-center">
+            <img 
+              src="/lovable-uploads/082b41c8-f84f-44f0-9084-137a3e9cbfe2.png" 
+              alt="Adhyan Library Logo" 
+              className="h-16 w-auto"
+            />
+          </div>
           <CardTitle className="text-2xl font-bold text-primary">Adhyan Library</CardTitle>
           <CardDescription>Access your library account</CardDescription>
         </CardHeader>

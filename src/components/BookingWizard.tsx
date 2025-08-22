@@ -64,7 +64,7 @@ export const BookingWizard = ({
 
   // Fetch seats when type, dates, or slot changes
   useEffect(() => {
-    if (fromDate && toDate && (step === 3 || (step === 4 && bookingType === '12hr'))) {
+    if (fromDate && toDate && ((step === 4 && bookingType === '12hr') || (step === 3 && bookingType === '24hr'))) {
       fetchSeats();
     }
   }, [fromDate, toDate, bookingType, slot, step]);
@@ -187,8 +187,8 @@ export const BookingWizard = ({
         if (bookingError) throw bookingError;
 
         toast({
-          title: 'Booking Submitted',
-          description: 'Your booking is pending payment. Please complete payment within 30 minutes.',
+          title: 'Request Sent for Approval',
+          description: 'Your booking request has been submitted. You will receive a payment link once approved.',
         });
       }
 
@@ -218,14 +218,14 @@ export const BookingWizard = ({
     
     if (step === 2 && bookingType === '24hr') {
       setSlot('full');
-      setStep(4); // Skip slot selection for 24hr
+      setStep(3); // Go to seat selection for 24hr
     } else {
       setStep(step + 1);
     }
   };
 
   const prevStep = () => {
-    if (step === 4 && bookingType === '24hr') {
+    if (step === 3 && bookingType === '24hr') {
       setStep(2);
     } else {
       setStep(step - 1);
@@ -238,7 +238,7 @@ export const BookingWizard = ({
     return 'bg-seat-available text-black';
   };
 
-  const totalSteps = bookingType === '24hr' ? 5 : 6;
+  const totalSteps = bookingType === '24hr' ? 4 : 5;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -264,9 +264,18 @@ export const BookingWizard = ({
                   <Calendar
                     mode="single"
                     selected={fromDate}
-                    onSelect={setFromDate}
+                    onSelect={(date) => {
+                      setFromDate(date);
+                      // Auto-select today for from date and 1 month later for to date
+                      if (!fromDate && date) {
+                        const today = new Date();
+                        const oneMonthLater = addMonths(today, 1);
+                        setFromDate(today);
+                        setToDate(oneMonthLater);
+                      }
+                    }}
                     disabled={(date) => isBefore(date, new Date())}
-                    className="rounded-md border"
+                    className="rounded-md border pointer-events-auto"
                   />
                 </div>
                 <div>
@@ -276,7 +285,7 @@ export const BookingWizard = ({
                     selected={toDate}
                     onSelect={setToDate}
                     disabled={(date) => !fromDate || isBefore(date, fromDate)}
-                    className="rounded-md border"
+                    className="rounded-md border pointer-events-auto"
                   />
                 </div>
               </div>
@@ -337,53 +346,8 @@ export const BookingWizard = ({
             </div>
           )}
 
-          {/* Step 3: Time Slot Selection (only for 12hr bookings) */}
-          {step === 3 && bookingType === '12hr' && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Select Time Slot</h3>
-              <RadioGroup value={slot} onValueChange={(value) => setSlot(value as 'day' | 'night')}>
-                <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="day" id="day" />
-                      <Label htmlFor="day" className="flex-1 cursor-pointer">
-                        <div className="space-y-1">
-                          <div className="font-medium flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
-                            Day Slot
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            9:00 AM - 9:00 PM
-                          </div>
-                        </div>
-                      </Label>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="night" id="night" />
-                      <Label htmlFor="night" className="flex-1 cursor-pointer">
-                        <div className="space-y-1">
-                          <div className="font-medium flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
-                            Night Slot
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            9:00 PM - 9:00 AM
-                          </div>
-                        </div>
-                      </Label>
-                    </div>
-                  </CardContent>
-                </Card>
-              </RadioGroup>
-            </div>
-          )}
-
-          {/* Step 4: Seat Selection */}
-          {((step === 4 && bookingType === '12hr') || (step === 4 && bookingType === '24hr')) && (
+          {/* Step 3: Seat Selection for 24hr OR Time Slot Selection for 12hr */}
+          {step === 3 && bookingType === '24hr' && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Select Seat</h3>
               {isLoading ? (
@@ -456,8 +420,127 @@ export const BookingWizard = ({
             </div>
           )}
 
-          {/* Step 5/6: Final Confirmation */}
-          {((step === 5 && bookingType === '12hr') || (step === 5 && bookingType === '24hr')) && (
+          {/* Step 3: Time Slot Selection (only for 12hr bookings) */}
+          {step === 3 && bookingType === '12hr' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Select Time Slot</h3>
+              <RadioGroup value={slot} onValueChange={(value) => setSlot(value as 'day' | 'night')}>
+                <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="day" id="day" />
+                      <Label htmlFor="day" className="flex-1 cursor-pointer">
+                        <div className="space-y-1">
+                          <div className="font-medium flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Day Slot
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            9:00 AM - 9:00 PM
+                          </div>
+                        </div>
+                      </Label>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="night" id="night" />
+                      <Label htmlFor="night" className="flex-1 cursor-pointer">
+                        <div className="space-y-1">
+                          <div className="font-medium flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Night Slot
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            9:00 PM - 9:00 AM
+                          </div>
+                        </div>
+                      </Label>
+                    </div>
+                  </CardContent>
+                </Card>
+              </RadioGroup>
+            </div>
+          )}
+
+          {/* Step 4: Seat Selection for 12hr bookings */}
+          {step === 4 && bookingType === '12hr' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Select Seat</h3>
+              {isLoading ? (
+                <div className="text-center py-8">Loading available seats...</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-6 gap-2">
+                    {seatStatuses.map((seatStatus) => (
+                      <Button
+                        key={seatStatus.seat_id}
+                        variant={selectedSeat === seatStatus.seat_id ? 'default' : 'outline'}
+                        className={`h-12 text-sm ${
+                          selectedSeat === seatStatus.seat_id 
+                            ? 'ring-2 ring-primary' 
+                            : getSeatColor(seatStatus)
+                        }`}
+                        onClick={() => setSelectedSeat(seatStatus.seat_id)}
+                      >
+                        {seatStatus.seat_number}
+                      </Button>
+                    ))}
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-seat-available rounded"></div>
+                      <span>Available</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-seat-occupied rounded"></div>
+                      <span>Occupied</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-seat-waitlisted rounded"></div>
+                      <span>Waitlisted</span>
+                    </div>
+                  </div>
+
+                  {selectedSeat && (
+                    <Card>
+                      <CardContent className="pt-4">
+                        {(() => {
+                          const seatStatus = seatStatuses.find(s => s.seat_id === selectedSeat);
+                          return (
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span>Seat:</span>
+                                <span className="font-bold">{seatStatus?.seat_number}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Status:</span>
+                                <Badge variant={seatStatus?.available ? 'default' : 'secondary'}>
+                                  {seatStatus?.available ? 'Available' : 'Will join waitlist'}
+                                </Badge>
+                              </div>
+                              {seatStatus?.occupant && (
+                                <div className="flex justify-between">
+                                  <span>Current occupant:</span>
+                                  <span className="text-sm">{seatStatus.occupant}</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Step 4/5: Final Review and Confirmation */}
+          {((step === 4 && bookingType === '24hr') || (step === 5 && bookingType === '12hr')) && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <User className="h-5 w-5" />
@@ -518,12 +601,12 @@ export const BookingWizard = ({
               Previous
             </Button>
             
-            {((step === 5 && bookingType === '12hr') || (step === 5 && bookingType === '24hr')) ? (
+            {((step === 5 && bookingType === '12hr') || (step === 4 && bookingType === '24hr')) ? (
               <Button
                 onClick={handleBooking}
                 disabled={!selectedSeat || isLoading}
               >
-                {isLoading ? 'Submitting...' : 'Confirm Booking'}
+                {isLoading ? 'Submitting...' : 'Send Request for Approval'}
               </Button>
             ) : (
               <Button onClick={nextStep} disabled={isLoading}>

@@ -1,9 +1,11 @@
-import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import Auth from './Auth';
 
-const Index = () => {
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -14,13 +16,9 @@ const Index = () => {
     );
   }
 
-  // If user is logged in, redirect to home
-  if (user) {
-    return <Navigate to="/home" replace />;
+  if (!user) {
+    return <Navigate to="/" replace />;
   }
 
-  // If not logged in, show login page
-  return <Auth />;
+  return <>{children}</>;
 };
-
-export default Index;
