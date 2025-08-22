@@ -83,10 +83,10 @@ export const BookingWizard = ({
     
     setIsLoading(true);
     try {
-      // Determine seat range based on booking type
+      // Step 1: Identify seat pool based on booking type
       const seatFilter = bookingType === '24hr' 
-        ? { gte: 1, lte: 13 }
-        : { gte: 14, lte: 50 };
+        ? { gte: 1, lte: 13 }  // 24hr seats: 1-13
+        : { gte: 14, lte: 50 }; // 12hr seats: 14-50
 
       const { data: seatsData } = await supabase
         .from('seats')
@@ -97,14 +97,17 @@ export const BookingWizard = ({
 
       setSeats(seatsData || []);
 
-      // Optimize by batch checking all seats at once
       const seatIds = seatsData?.map(s => s.id) || [];
       
-      // Get all conflicting bookings in one query
+      // Step 2: Fetch existing bookings for candidate seats with slot information
       const { data: allBookings } = await supabase
         .from('bookings')
         .select(`
           seat_id,
+          slot,
+          type,
+          start_time,
+          end_time,
           users (name)
         `)
         .in('seat_id', seatIds)
@@ -117,31 +120,52 @@ export const BookingWizard = ({
         .select('seat_id')
         .in('seat_id', seatIds);
 
-      // Create lookup maps for faster processing
-      const bookingMap = new Map();
+      // Create waitlist lookup map
       const waitlistMap = new Map();
-      
-      allBookings?.forEach(booking => {
-        if (!bookingMap.has(booking.seat_id)) {
-          bookingMap.set(booking.seat_id, booking);
-        }
-      });
-      
       allWaitlist?.forEach(entry => {
         waitlistMap.set(entry.seat_id, (waitlistMap.get(entry.seat_id) || 0) + 1);
       });
 
-      // Build status array quickly
+      // Step 3: Check availability seat by seat with slot-based conflict logic
       const statuses: SeatStatus[] = seatsData?.map(seat => {
-        const conflictingBooking = bookingMap.get(seat.id);
+        const seatBookings = allBookings?.filter(booking => booking.seat_id === seat.id) || [];
         const waitlistCount = waitlistMap.get(seat.id) || 0;
+        
+        // Step 4: Determine if seat is available based on booking type and slot conflicts
+        let hasConflict = false;
+        let conflictingOccupant = null;
+
+        for (const booking of seatBookings) {
+          if (bookingType === '24hr') {
+            // 24hr booking: conflicts with any existing booking (Day, Night, or 24hr)
+            hasConflict = true;
+            conflictingOccupant = booking.users?.name;
+            break;
+          } else if (bookingType === '12hr') {
+            const currentSlot = slot; // 'day' or 'night'
+            
+            // 12hr booking conflicts:
+            if (booking.type === '24hr' || booking.slot === 'full') {
+              // Conflicts with any 24hr booking
+              hasConflict = true;
+              conflictingOccupant = booking.users?.name;
+              break;
+            } else if (booking.slot === currentSlot) {
+              // Conflicts with same slot booking
+              hasConflict = true;
+              conflictingOccupant = booking.users?.name;
+              break;
+            }
+            // Day doesn't conflict with Night, and vice versa
+          }
+        }
         
         return {
           seat_id: seat.id,
           seat_number: seat.seat_number,
-          available: !conflictingBooking,
+          available: !hasConflict,
           waitlisted: waitlistCount > 0,
-          occupant: conflictingBooking?.users?.name,
+          occupant: conflictingOccupant,
         };
       }) || [];
 
