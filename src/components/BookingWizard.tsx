@@ -69,6 +69,15 @@ export const BookingWizard = ({
     }
   }, [fromDate, toDate, bookingType, slot, step]);
 
+  // Pre-fetch seats when moving to seat selection steps for better performance
+  useEffect(() => {
+    if (fromDate && toDate) {
+      if ((bookingType === '12hr' && step === 3) || (bookingType === '24hr' && step === 2)) {
+        fetchSeats();
+      }
+    }
+  }, [step, bookingType, fromDate, toDate]);
+
   const fetchSeats = async () => {
     if (!fromDate || !toDate) return;
     
@@ -88,38 +97,53 @@ export const BookingWizard = ({
 
       setSeats(seatsData || []);
 
-      // Check seat availability for the selected date range
-      const statuses: SeatStatus[] = [];
+      // Optimize by batch checking all seats at once
+      const seatIds = seatsData?.map(s => s.id) || [];
       
-      for (const seat of seatsData || []) {
-        // Check for overlapping bookings in the selected date range
-        const { data: conflictingBookings } = await supabase
-          .from('bookings')
-          .select(`
-            *,
-            users (name)
-          `)
-          .eq('seat_id', seat.id)
-          .in('status', ['confirmed', 'pending'])
-          .or(`and(start_time.lt.${toDate.toISOString()},end_time.gt.${fromDate.toISOString()})`);
+      // Get all conflicting bookings in one query
+      const { data: allBookings } = await supabase
+        .from('bookings')
+        .select(`
+          seat_id,
+          users (name)
+        `)
+        .in('seat_id', seatIds)
+        .in('status', ['confirmed', 'pending'])
+        .or(`and(start_time.lt.${toDate.toISOString()},end_time.gt.${fromDate.toISOString()})`);
 
-        // Check waitlist
-        const { data: waitlistCount } = await supabase
-          .from('waitlist')
-          .select('id')
-          .eq('seat_id', seat.id);
+      // Get all waitlist entries in one query
+      const { data: allWaitlist } = await supabase
+        .from('waitlist')
+        .select('seat_id')
+        .in('seat_id', seatIds);
 
-        const available = !conflictingBookings || conflictingBookings.length === 0;
-        const waitlisted = waitlistCount && waitlistCount.length > 0;
+      // Create lookup maps for faster processing
+      const bookingMap = new Map();
+      const waitlistMap = new Map();
+      
+      allBookings?.forEach(booking => {
+        if (!bookingMap.has(booking.seat_id)) {
+          bookingMap.set(booking.seat_id, booking);
+        }
+      });
+      
+      allWaitlist?.forEach(entry => {
+        waitlistMap.set(entry.seat_id, (waitlistMap.get(entry.seat_id) || 0) + 1);
+      });
 
-        statuses.push({
+      // Build status array quickly
+      const statuses: SeatStatus[] = seatsData?.map(seat => {
+        const conflictingBooking = bookingMap.get(seat.id);
+        const waitlistCount = waitlistMap.get(seat.id) || 0;
+        
+        return {
           seat_id: seat.id,
           seat_number: seat.seat_number,
-          available,
-          waitlisted,
-          occupant: conflictingBookings?.[0]?.users?.name,
-        });
-      }
+          available: !conflictingBooking,
+          waitlisted: waitlistCount > 0,
+          occupant: conflictingBooking?.users?.name,
+        };
+      }) || [];
 
       setSeatStatuses(statuses);
     } catch (error) {
@@ -319,9 +343,9 @@ export const BookingWizard = ({
                       <Label htmlFor="12hr" className="flex-1 cursor-pointer">
                         <div className="space-y-1">
                           <div className="font-medium">12 Hour Booking</div>
-                          <div className="text-sm text-muted-foreground">
-                            Choose day or night slot • Seats 14-50 • ₹2,300/month
-                          </div>
+                           <div className="text-sm text-muted-foreground">
+                             Choose day or night slot • Seats 14-50 • ₹2,300/month • <span className="line-through">Permanent Locker</span>
+                           </div>
                         </div>
                       </Label>
                     </div>
@@ -334,9 +358,9 @@ export const BookingWizard = ({
                       <Label htmlFor="24hr" className="flex-1 cursor-pointer">
                         <div className="space-y-1">
                           <div className="font-medium">24 Hour Booking</div>
-                          <div className="text-sm text-muted-foreground">
-                            Full day access • Seats 1-13 • ₹3,800/month
-                          </div>
+                           <div className="text-sm text-muted-foreground">
+                             Full day access • Seats 1-13 • ₹3,800/month • Double Locker and Fixed Seat
+                           </div>
                         </div>
                       </Label>
                     </div>
@@ -572,12 +596,20 @@ export const BookingWizard = ({
                       {seatStatuses.find(s => s.seat_id === selectedSeat)?.seat_number}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Booking Type:</span>
-                    <span className="font-medium">
-                      {bookingType === '24hr' ? '24 Hour' : `12 Hour (${slot === 'day' ? 'Day' : 'Night'})`}
-                    </span>
-                  </div>
+                   <div className="flex justify-between">
+                     <span>Booking Type:</span>
+                     <span className="font-medium">
+                       {bookingType === '24hr' ? '24 Hour' : `12 Hour`}
+                     </span>
+                   </div>
+                   {bookingType === '12hr' && (
+                     <div className="flex justify-between">
+                       <span>Time Slot:</span>
+                       <span className="font-medium">
+                         {slot === 'day' ? 'Day Time (9 AM - 9 PM)' : 'Night Time (9 PM - 9 AM)'}
+                       </span>
+                     </div>
+                   )}
                   <div className="flex justify-between text-lg font-bold border-t pt-2">
                     <span>Total Cost:</span>
                     <span>₹{calculateCost().toLocaleString()}</span>

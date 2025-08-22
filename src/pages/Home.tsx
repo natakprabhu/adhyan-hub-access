@@ -20,6 +20,7 @@ import {
   Moon,
   Armchair
 } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface UserProfile {
   id: string;
@@ -34,6 +35,18 @@ interface SeatStats {
   waitlisted: number;
 }
 
+interface RecentBooking {
+  id: string;
+  seat_number: number;
+  type: string;
+  slot?: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  payment_status: string;
+  created_at: string;
+}
+
 export default function Home() {
   const { user, loading } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -43,6 +56,7 @@ export default function Home() {
     occupied: 0,
     waitlisted: 0
   });
+  const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([]);
   const [showBookingWizard, setShowBookingWizard] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -85,6 +99,40 @@ export default function Home() {
       };
 
       setSeatStats(stats);
+
+      // Fetch recent bookings for this user
+      if (profile) {
+        const { data: bookings } = await supabase
+          .from('bookings')
+          .select(`
+            id,
+            type,
+            slot,
+            start_time,
+            end_time,
+            status,
+            payment_status,
+            created_at,
+            seats (seat_number)
+          `)
+          .eq('user_id', profile.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        const formattedBookings: RecentBooking[] = bookings?.map(booking => ({
+          id: booking.id,
+          seat_number: booking.seats?.seat_number || 0,
+          type: booking.type,
+          slot: booking.slot,
+          start_time: booking.start_time,
+          end_time: booking.end_time,
+          status: booking.status,
+          payment_status: booking.payment_status,
+          created_at: booking.created_at,
+        })) || [];
+
+        setRecentBookings(formattedBookings);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -158,10 +206,10 @@ export default function Home() {
                   <Users className="h-4 w-4 text-primary" />
                   Flexible timing options
                 </li>
-                <li className="flex items-center gap-2">
-                  <Lock className="h-4 w-4 text-primary" />
-                  <span className="underline">Permanent Locker</span>
-                </li>
+                 <li className="flex items-center gap-2">
+                   <Lock className="h-4 w-4 text-primary" />
+                   <span className="line-through">Permanent Locker</span>
+                 </li>
               </ul>
             </CardContent>
           </Card>
@@ -277,6 +325,51 @@ export default function Home() {
           Book a Seat
         </Button>
       </div>
+
+      {/* Recent Bookings */}
+      {recentBookings.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold">Recent Bookings</h2>
+          <div className="space-y-3">
+            {recentBookings.map((booking) => (
+              <Card key={booking.id}>
+                <CardContent className="pt-4">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <div className="font-medium">
+                        Seat {booking.seat_number} • {booking.type === '24hr' ? '24 Hour' : '12 Hour'}
+                        {booking.slot && booking.slot !== 'full' && (
+                          <span className="text-muted-foreground ml-1">
+                            ({booking.slot === 'day' ? 'Day Time' : 'Night Time'})
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {format(new Date(booking.start_time), 'MMM yyyy')} - {format(new Date(booking.end_time), 'MMM yyyy')}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Booked on {format(new Date(booking.created_at), 'MMM d, yyyy')}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant={
+                        booking.status === 'confirmed' ? 'default' :
+                        booking.status === 'pending' ? 'secondary' : 'destructive'
+                      }>
+                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {booking.payment_status === 'completed' ? 'Paid' : 
+                         booking.payment_status === 'pending' ? 'Payment Pending' : 'Payment Failed'}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showBookingWizard && (
         <BookingWizard
