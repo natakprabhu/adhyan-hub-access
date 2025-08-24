@@ -9,7 +9,8 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { User, Phone, Mail, MessageCircle, Calendar, Clock, MapPin, Edit } from 'lucide-react';
+import { User, Phone, Mail, MessageCircle, Calendar, Clock, MapPin, Edit, Download } from 'lucide-react';
+import { generateInvoicePDF } from '@/utils/pdfGenerator';
 
 interface UserProfile {
   id: string;
@@ -25,7 +26,18 @@ interface Transaction {
   amount: number;
   status: string;
   created_at: string;
-  booking: {
+  booking_id?: string;
+  bookings?: {
+    id: string;
+    type: string;
+    slot?: string;
+    start_time: string;
+    end_time: string;
+    seats: {
+      seat_number: number;
+    };
+  };
+  booking?: {
     seats: {
       seat_number: number;
     };
@@ -80,10 +92,14 @@ export default function Profile() {
 
         const formattedTransactions = (transactionsData || []).map(tx => ({
           ...tx,
-          booking: tx.bookings
+          booking: tx.bookings,
+          bookings: tx.bookings ? {
+            ...tx.bookings,
+            id: tx.booking_id || tx.id
+          } : undefined
         }));
 
-        setTransactions(formattedTransactions);
+        setTransactions(formattedTransactions as Transaction[]);
       }
     } catch (error) {
       console.error('Error fetching profile data:', error);
@@ -158,11 +174,40 @@ export default function Profile() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
+      case 'completed':
+      case 'paid':
+      case 'success':
+        return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'failed': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const handleDownloadInvoice = (transaction: Transaction) => {
+    const bookingData = transaction.bookings || transaction.booking;
+    if (!bookingData || !userProfile) return;
+
+    const invoiceData = {
+      bookingId: transaction.booking_id || transaction.id,
+      userName: userProfile.name,
+      userEmail: userProfile.email,
+      amount: parseFloat(transaction.amount.toString()),
+      seatNumber: bookingData.seats.seat_number,
+      bookingType: bookingData.type,
+      slot: bookingData.slot || '',
+      startDate: formatDateTime(bookingData.start_time),
+      endDate: formatDateTime(bookingData.end_time),
+      transactionId: transaction.id,
+      paymentDate: transaction.created_at,
+      status: transaction.status
+    };
+
+    generateInvoicePDF(invoiceData);
+    toast({
+      title: "Invoice Downloaded",
+      description: "Your invoice has been downloaded successfully.",
+    });
   };
 
   return (
@@ -329,11 +374,23 @@ export default function Profile() {
                         </p>
                       )}
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold">₹{transaction.amount}</p>
-                      <Badge className={getStatusColor(transaction.status)}>
-                        {transaction.status}
-                      </Badge>
+                    <div className="text-right flex items-center gap-2">
+                      <div>
+                        <p className="font-bold">₹{transaction.amount}</p>
+                        <Badge className={getStatusColor(transaction.status)}>
+                          {transaction.status}
+                        </Badge>
+                      </div>
+                      {(transaction.status === 'paid' || transaction.status === 'success' || transaction.status === 'completed') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadInvoice(transaction)}
+                          title="Download Invoice"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                   
