@@ -36,37 +36,51 @@ export default function SeatPlan() {
   const fetchSeatPlan = async () => {
     setIsLoading(true);
     try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // Optimized query - get all data in fewer requests
       const { data: seatsData } = await supabase
         .from('seats')
         .select('*')
         .order('seat_number');
 
-      const seatInfos: SeatInfo[] = [];
-      const now = new Date().toISOString();
+      // Get all today's bookings in one query
+      const { data: todayBookings } = await supabase
+        .from('bookings')
+        .select(`
+          seat_id,
+          slot,
+          start_time,
+          end_time,
+          status,
+          payment_status,
+          users (name)
+        `)
+        .in('status', ['confirmed'])
+        .eq('payment_status', 'paid')
+        .gte('start_time', today.toISOString())
+        .lt('start_time', tomorrow.toISOString());
 
-      for (const seat of seatsData || []) {
-        // Get current active booking
-        const { data: currentBookings } = await supabase
-          .from('bookings')
-          .select(`
-            *,
-            users (name)
-          `)
-          .eq('seat_id', seat.id)
-          .in('status', ['confirmed', 'pending'])
-          .lte('start_time', now)
-          .gte('end_time', now)
-          .limit(1);
+      // Get all waitlist counts in one query
+      const { data: waitlistData } = await supabase
+        .from('waitlist')
+        .select('seat_id');
 
-        const currentBooking = currentBookings?.[0];
+      // Process waitlist counts
+      const waitlistCounts = waitlistData?.reduce((acc, item) => {
+        acc[item.seat_id] = (acc[item.seat_id] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
 
-        // Get waitlist count
-        const { data: waitlist } = await supabase
-          .from('waitlist')
-          .select('id')
-          .eq('seat_id', seat.id);
+      // Process seat information
+      const seatInfos: SeatInfo[] = seatsData?.map(seat => {
+        const seatBookings = todayBookings?.filter(booking => booking.seat_id === seat.id) || [];
+        const currentBooking = seatBookings[0]; // Get first booking for today
 
-        seatInfos.push({
+        return {
           ...seat,
           currentBooking: currentBooking ? {
             user_name: currentBooking.users?.name || 'Unknown User',
@@ -75,9 +89,9 @@ export default function SeatPlan() {
             end_time: currentBooking.end_time,
             status: currentBooking.status,
           } : undefined,
-          waitlistCount: waitlist?.length || 0,
-        });
-      }
+          waitlistCount: waitlistCounts[seat.id] || 0,
+        };
+      }) || [];
 
       setSeats(seatInfos);
     } catch (error) {

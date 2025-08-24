@@ -52,6 +52,7 @@ export default function Profile() {
   const { user, loading } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [currentSeat, setCurrentSeat] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -100,6 +101,35 @@ export default function Profile() {
         }));
 
         setTransactions(formattedTransactions as Transaction[]);
+
+        // Fetch current active seat
+        const now = new Date().toISOString();
+        const { data: currentBooking } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            seats (seat_number),
+            users!inner (validity_from, validity_to)
+          `)
+          .eq('user_id', profile.id)
+          .in('status', ['confirmed'])
+          .eq('payment_status', 'paid')
+          .lte('start_time', now)
+          .gte('end_time', now)
+          .single();
+
+        if (currentBooking) {
+          const validityTo = currentBooking.users?.validity_to;
+          const daysRemaining = validityTo ? Math.ceil((new Date(validityTo).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null;
+          
+          setCurrentSeat({
+            seat_number: currentBooking.seats.seat_number,
+            type: currentBooking.type,
+            validity_to: validityTo,
+            days_remaining: daysRemaining,
+            is_expired: daysRemaining !== null && daysRemaining < 0
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching profile data:', error);
@@ -222,24 +252,59 @@ export default function Profile() {
         </Button>
       </header>
 
-      {/* Account Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Account Status</span>
-            <Badge variant={userProfile?.approved ? 'default' : 'secondary'}>
-              {userProfile?.approved ? 'Approved' : 'Pending Approval'}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        {!userProfile?.approved && (
+      {/* Account Status & Current Seat */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Account Status</span>
+              <Badge variant={userProfile?.approved ? 'default' : 'secondary'}>
+                {userProfile?.approved ? 'Approved' : 'Pending Approval'}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          {!userProfile?.approved && (
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Your account is pending admin approval. You can browse seats but cannot make bookings yet.
+              </p>
+            </CardContent>
+          )}
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Current Allocated Seat
+            </CardTitle>
+          </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Your account is pending admin approval. You can browse seats but cannot make bookings yet.
-            </p>
+            {currentSeat ? (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Seat {currentSeat.seat_number}</span>
+                  <Badge variant="outline">{currentSeat.type}</Badge>
+                </div>
+                {currentSeat.validity_to && (
+                  <div className="text-sm">
+                    <p className={`font-medium ${currentSeat.is_expired ? 'text-red-600' : currentSeat.days_remaining <= 7 ? 'text-yellow-600' : 'text-green-600'}`}>
+                      {currentSeat.is_expired ? 'Expired' : 
+                       currentSeat.days_remaining <= 0 ? 'Expires today' :
+                       `${currentSeat.days_remaining} days remaining`}
+                    </p>
+                    <p className="text-muted-foreground">
+                      Valid until: {new Date(currentSeat.validity_to).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">No current seat allocation</p>
+            )}
           </CardContent>
-        )}
-      </Card>
+        </Card>
+      </div>
 
       {/* Profile Information */}
       <Card>
@@ -355,7 +420,7 @@ export default function Profile() {
             <p className="text-center text-muted-foreground py-4">
               No transactions found
             </p>
-          ) : (
+          ) : transactions.length <= 2 ? (
             <div className="space-y-4">
               {transactions.map((transaction) => (
                 <div key={transaction.id} className="border rounded-lg p-4 space-y-3">
@@ -406,6 +471,92 @@ export default function Profile() {
                   </p>
                 </div>
               ))}
+            </div>
+          ) : (
+            <div className="flex gap-4">
+              <div className="flex-1 space-y-4">
+                {transactions.slice(0, 2).map((transaction) => (
+                  <div key={transaction.id} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">
+                            Seat {transaction.booking.seats.seat_number}
+                          </span>
+                          <Badge variant="outline">{transaction.booking.type}</Badge>
+                        </div>
+                        {transaction.booking.slot && transaction.booking.slot !== 'full' && (
+                          <p className="text-sm text-muted-foreground capitalize">
+                            {transaction.booking.slot} slot
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right flex items-center gap-2">
+                        <div>
+                          <p className="font-bold">₹{transaction.amount}</p>
+                          <Badge className={getStatusColor(transaction.status)}>
+                            {transaction.status}
+                          </Badge>
+                        </div>
+                        {(transaction.status === 'paid' || transaction.status === 'success' || transaction.status === 'completed') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadInvoice(transaction)}
+                            title="Download Invoice"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      {formatDateTime(transaction.booking.start_time)} - {formatDateTime(transaction.booking.end_time)}
+                    </div>
+                    
+                    <Separator />
+                    
+                    <p className="text-xs text-muted-foreground">
+                      Transaction Date: {formatDateTime(transaction.created_at)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Vertical Navigation for Recent Bookings */}
+              <div className="w-64 border-l pl-4">
+                <h4 className="font-medium mb-3 text-sm">Recent Bookings</h4>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {transactions.slice(2).map((transaction) => (
+                    <div key={transaction.id} className="border rounded p-2 text-sm">
+                      <div className="flex justify-between items-start">
+                        <span className="font-medium">Seat {transaction.booking.seats.seat_number}</span>
+                        <Badge variant="outline" className="text-xs">{transaction.booking.type}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        ₹{transaction.amount} - {transaction.status}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDateTime(transaction.created_at)}
+                      </p>
+                      {(transaction.status === 'paid' || transaction.status === 'success' || transaction.status === 'completed') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-1 h-6 text-xs"
+                          onClick={() => handleDownloadInvoice(transaction)}
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          PDF
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

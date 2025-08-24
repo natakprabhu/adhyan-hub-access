@@ -95,12 +95,19 @@ export const UsersManagement = () => {
 
   const updateUserValidity = async (userId: string, validityFrom: string, validityTo: string) => {
     try {
+      const updates: any = { 
+        validity_from: validityFrom,
+        validity_to: validityTo
+      };
+
+      // If approving and setting validity, also approve the user
+      if (validityFrom && validityTo) {
+        updates.approved = true;
+      }
+
       const { error } = await supabase
         .from('users')
-        .update({ 
-          validity_from: validityFrom,
-          validity_to: validityTo
-        })
+        .update(updates)
         .eq('id', userId);
 
       if (error) throw error;
