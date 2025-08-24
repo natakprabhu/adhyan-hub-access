@@ -93,6 +93,7 @@ export type Database = {
         Row: {
           admin_notes: string | null
           created_at: string
+          description: string | null
           end_time: string
           id: string
           payment_screenshot_url: string | null
@@ -110,6 +111,7 @@ export type Database = {
         Insert: {
           admin_notes?: string | null
           created_at?: string
+          description?: string | null
           end_time: string
           id?: string
           payment_screenshot_url?: string | null
@@ -127,6 +129,7 @@ export type Database = {
         Update: {
           admin_notes?: string | null
           created_at?: string
+          description?: string | null
           end_time?: string
           id?: string
           payment_screenshot_url?: string | null
