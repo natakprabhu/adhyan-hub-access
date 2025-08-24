@@ -14,12 +14,91 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          password_hash: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          password_hash: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          password_hash?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      biometric_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by_admin: string | null
+          biometric_id: number
+          created_at: string
+          id: string
+          status: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by_admin?: string | null
+          biometric_id: number
+          created_at?: string
+          id?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by_admin?: string | null
+          biometric_id?: number
+          created_at?: string
+          id?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biometric_assignments_assigned_by_admin_fkey"
+            columns: ["assigned_by_admin"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "biometric_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
+          admin_notes: string | null
           created_at: string
           end_time: string
           id: string
+          payment_screenshot_url: string | null
           payment_status: string | null
+          receipt_sent: boolean | null
+          receipt_sent_at: string | null
           seat_id: string
           slot: string | null
           start_time: string
@@ -29,10 +108,14 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_notes?: string | null
           created_at?: string
           end_time: string
           id?: string
+          payment_screenshot_url?: string | null
           payment_status?: string | null
+          receipt_sent?: boolean | null
+          receipt_sent_at?: string | null
           seat_id: string
           slot?: string | null
           start_time: string
@@ -42,10 +125,14 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_notes?: string | null
           created_at?: string
           end_time?: string
           id?: string
+          payment_screenshot_url?: string | null
           payment_status?: string | null
+          receipt_sent?: boolean | null
+          receipt_sent_at?: string | null
           seat_id?: string
           slot?: string | null
           start_time?: string
@@ -145,6 +232,8 @@ export type Database = {
           phone: string
           telegram_id: string | null
           updated_at: string
+          validity_from: string | null
+          validity_to: string | null
         }
         Insert: {
           approved?: boolean | null
@@ -156,6 +245,8 @@ export type Database = {
           phone: string
           telegram_id?: string | null
           updated_at?: string
+          validity_from?: string | null
+          validity_to?: string | null
         }
         Update: {
           approved?: boolean | null
@@ -167,6 +258,8 @@ export type Database = {
           phone?: string
           telegram_id?: string | null
           updated_at?: string
+          validity_from?: string | null
+          validity_to?: string | null
         }
         Relationships: []
       }
