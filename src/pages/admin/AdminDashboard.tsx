@@ -104,12 +104,75 @@ export const AdminDashboard = () => {
 
   const submitBookingChanges = async (bookingId: string, updates: any) => {
     try {
+      // Get the current booking to check if we need to create a transaction
+      const { data: currentBooking } = await supabase
+        .from('bookings')
+        .select('*, users(*)')
+        .eq('id', bookingId)
+        .single();
+
       const { error } = await supabase
         .from('bookings')
         .update(updates)
         .eq('id', bookingId);
 
       if (error) throw error;
+
+      // If the booking was just confirmed and payment was just marked as paid, create a transaction
+      if (updates.status === 'confirmed' && updates.payment_status === 'paid' && currentBooking) {
+        // Check if transaction already exists
+        const { data: existingTransaction } = await supabase
+          .from('transactions')
+          .select('id')
+          .eq('booking_id', bookingId)
+          .single();
+
+        if (!existingTransaction) {
+          // Calculate amount based on seat type and booking duration
+          const startTime = new Date(currentBooking.start_time);
+          const endTime = new Date(currentBooking.end_time);
+          const hours = Math.ceil((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60));
+          
+          // Basic pricing logic - you can adjust this
+          let amount = 0;
+          if (currentBooking.type === '24hr') {
+            amount = hours * 50; // ₹50 per hour for 24hr seats
+          } else {
+            amount = hours * 30; // ₹30 per hour for 12hr seats
+          }
+
+          const { error: transactionError } = await supabase
+            .from('transactions')
+            .insert({
+              user_id: currentBooking.user_id,
+              booking_id: bookingId,
+              amount: amount,
+              status: 'completed'
+            });
+
+          if (transactionError) {
+            console.error('Error creating transaction:', transactionError);
+          }
+        }
+      }
+
+      // Update user validity period if booking is confirmed
+      if (updates.status === 'confirmed' && currentBooking?.users) {
+        const startDate = new Date(currentBooking.start_time);
+        const endDate = new Date(currentBooking.end_time);
+        
+        const { error: userUpdateError } = await supabase
+          .from('users')
+          .update({
+            validity_from: startDate.toISOString().split('T')[0],
+            validity_to: endDate.toISOString().split('T')[0]
+          })
+          .eq('id', currentBooking.user_id);
+
+        if (userUpdateError) {
+          console.error('Error updating user validity:', userUpdateError);
+        }
+      }
       
       await fetchBookings();
       setEditingBooking(null);

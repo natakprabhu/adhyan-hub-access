@@ -41,9 +41,9 @@ export const GanttChart = () => {
 
       setSeats(seatsData || []);
 
-      // Get bookings for the selected month
-      const startOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
-      const endOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
+      // Get bookings for the entire year
+      const startOfYear = new Date(selectedMonth.getFullYear(), 0, 1);
+      const endOfYear = new Date(selectedMonth.getFullYear(), 11, 31);
 
       const { data: bookingsData } = await supabase
         .from('bookings')
@@ -52,9 +52,10 @@ export const GanttChart = () => {
           users (name),
           seats (seat_number)
         `)
-        .gte('start_time', startOfMonth.toISOString())
-        .lte('end_time', endOfMonth.toISOString())
-        .in('status', ['confirmed', 'pending'])
+        .gte('start_time', startOfYear.toISOString())
+        .lte('end_time', endOfYear.toISOString())
+        .eq('status', 'confirmed')
+        .eq('payment_status', 'paid')
         .order('start_time');
 
       const formattedBookings = bookingsData?.map(booking => ({
@@ -83,35 +84,56 @@ export const GanttChart = () => {
     }
   };
 
-  const getDaysInMonth = () => {
+  // Get 15-day periods for the year
+  const get15DayPeriods = () => {
     const year = selectedMonth.getFullYear();
-    const month = selectedMonth.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    return Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1));
+    const periods = [];
+    
+    for (let month = 0; month < 12; month++) {
+      const monthStart = new Date(year, month, 1);
+      const monthName = monthStart.toLocaleDateString('en-US', { month: 'short' });
+      
+      // First half (1-15)
+      periods.push({
+        start: new Date(year, month, 1),
+        end: new Date(year, month, 15),
+        label: `${monthName} 1-15`
+      });
+      
+      // Second half (16-end)
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      periods.push({
+        start: new Date(year, month, 16),
+        end: new Date(year, month, lastDay),
+        label: `${monthName} 16-${lastDay}`
+      });
+    }
+    
+    return periods;
   };
 
-  const getBookingsForSeatAndDate = (seatId: string, date: Date, slot?: string) => {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
-
+  const getBookingsForSeatAndPeriod = (seatId: string, periodStart: Date, periodEnd: Date, slot?: string) => {
     return bookings.filter(booking => {
+      // Only show confirmed bookings with paid status
+      if (booking.status !== 'confirmed' || booking.payment_status !== 'paid') {
+        return false;
+      }
+      
       const bookingStart = new Date(booking.start_time);
       const bookingEnd = new Date(booking.end_time);
-      const isInTimeRange = bookingStart <= endOfDay && bookingEnd >= startOfDay;
+      const isInTimeRange = bookingStart <= periodEnd && bookingEnd >= periodStart;
       const matchesSlot = !slot || booking.slot === slot || booking.type === 'full_day';
       return booking.seat_id === seatId && isInTimeRange && matchesSlot;
     });
   };
 
-  const navigateMonth = (direction: 'prev' | 'next') => {
+  const navigateYear = (direction: 'prev' | 'next') => {
     setSelectedMonth(prev => {
       const newDate = new Date(prev);
       if (direction === 'prev') {
-        newDate.setMonth(newDate.getMonth() - 1);
+        newDate.setFullYear(newDate.getFullYear() - 1);
       } else {
-        newDate.setMonth(newDate.getMonth() + 1);
+        newDate.setFullYear(newDate.getFullYear() + 1);
       }
       return newDate;
     });
@@ -141,7 +163,7 @@ export const GanttChart = () => {
     );
   }
 
-  const days = getDaysInMonth();
+  const periods = get15DayPeriods();
 
   return (
     <div className="space-y-6">
@@ -154,18 +176,18 @@ export const GanttChart = () => {
                 Seat Schedule - Gantt View
               </CardTitle>
               <CardDescription>
-                View seat bookings across time periods. Green = Confirmed & Paid, Yellow = Pending, Red = Issues
+                Yearly overview of confirmed and paid bookings (15-day periods)
               </CardDescription>
             </div>
-            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')}>
+                <Button variant="outline" size="sm" onClick={() => navigateYear('prev')}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="font-medium min-w-32 text-center">
-                  {selectedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  {selectedMonth.getFullYear()}
                 </span>
-                <Button variant="outline" size="sm" onClick={() => navigateMonth('next')}>
+                <Button variant="outline" size="sm" onClick={() => navigateYear('next')}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -175,17 +197,13 @@ export const GanttChart = () => {
         <CardContent>
           <div className="overflow-x-auto">
             <div className="min-w-max">
-              {/* Header with dates */}
+              {/* Header with periods */}
               <div className="grid grid-cols-[100px_1fr] gap-0 mb-2">
                 <div className="p-2 border-b font-medium text-sm">Seat</div>
-                <div className="grid gap-0" style={{ gridTemplateColumns: `repeat(${days.length}, 1fr)` }}>
-                  {days.map((day, index) => (
-                    <div key={index} className="p-1 border-b border-l text-xs text-center font-medium min-w-16">
-                      {day.getDate()}
-                      <br />
-                      <span className="text-muted-foreground text-xs">
-                        {day.toLocaleDateString('en-US', { weekday: 'short' })}
-                      </span>
+                <div className="grid gap-0" style={{ gridTemplateColumns: `repeat(${periods.length}, 1fr)` }}>
+                  {periods.map((period, index) => (
+                    <div key={index} className="p-1 border-b border-l text-xs text-center font-medium min-w-20">
+                      {period.label}
                     </div>
                   ))}
                 </div>
@@ -194,84 +212,89 @@ export const GanttChart = () => {
               {/* Seat rows */}
               {seats.map((seat) => (
                 <div key={seat.id}>
-                  {/* Full day bookings row */}
-                  <div className="grid grid-cols-[100px_1fr] gap-0 border-b">
-                    <div className="p-2 border-r text-sm font-medium bg-gray-50">
-                      Seat {seat.seat_number}
-                      <br />
-                      <span className="text-xs text-muted-foreground">Full Day</span>
+                  {/* 24hr seats - single row with double height */}
+                  {seat.type === '24hr' ? (
+                    <div className="grid grid-cols-[100px_1fr] gap-0 border-b">
+                      <div className="p-2 border-r text-sm font-medium bg-gray-50" style={{ minHeight: '72px' }}>
+                        Seat {seat.seat_number}
+                        <br />
+                        <span className="text-xs text-muted-foreground">24hr</span>
+                      </div>
+                      <div className="grid gap-0" style={{ gridTemplateColumns: `repeat(${periods.length}, 1fr)` }}>
+                        {periods.map((period, periodIndex) => {
+                          const periodBookings = getBookingsForSeatAndPeriod(seat.id, period.start, period.end);
+                          return (
+                            <div key={periodIndex} className="border-l min-h-18 p-1" style={{ minHeight: '72px' }}>
+                              {periodBookings.map((booking, bookingIndex) => (
+                                <div
+                                  key={bookingIndex}
+                                  className="text-xs p-1 rounded border mb-1 bg-green-200 text-green-800 border-green-300"
+                                  title={`${booking.user_name} - ${booking.type}`}
+                                >
+                                  {formatBookingText(booking)}
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="grid gap-0" style={{ gridTemplateColumns: `repeat(${days.length}, 1fr)` }}>
-                      {days.map((day, dayIndex) => {
-                        const dayBookings = getBookingsForSeatAndDate(seat.id, day).filter(b => 
-                          b.type === 'full_day' || (b.slot === 'full' || !b.slot)
-                        );
-                        return (
-                          <div key={dayIndex} className="border-l min-h-12 p-1 relative">
-                            {dayBookings.map((booking, bookingIndex) => (
-                              <div
-                                key={bookingIndex}
-                                className={`text-xs p-1 rounded border mb-1 ${getBookingColor(booking)}`}
-                                title={`${booking.user_name} - ${booking.type} - ${booking.status}`}
-                              >
-                                {formatBookingText(booking)}
+                  ) : (
+                    // 12hr seats - two rows for day and night slots
+                    <>
+                      {/* Day slot row */}
+                      <div className="grid grid-cols-[100px_1fr] gap-0 border-b">
+                        <div className="p-2 border-r text-sm font-medium bg-blue-50">
+                          Seat {seat.seat_number}
+                          <br />
+                          <span className="text-xs text-muted-foreground">Day</span>
+                        </div>
+                        <div className="grid gap-0" style={{ gridTemplateColumns: `repeat(${periods.length}, 1fr)` }}>
+                          {periods.map((period, periodIndex) => {
+                            const dayBookings = getBookingsForSeatAndPeriod(seat.id, period.start, period.end, 'day');
+                            return (
+                              <div key={periodIndex} className="border-l min-h-10 p-1">
+                                {dayBookings.map((booking, bookingIndex) => (
+                                  <div
+                                    key={bookingIndex}
+                                    className="text-xs p-1 rounded border mb-1 bg-green-200 text-green-800 border-green-300"
+                                    title={`${booking.user_name} - Day slot`}
+                                  >
+                                    {formatBookingText(booking)}
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                            );
+                          })}
+                        </div>
+                      </div>
 
-                  {/* Day slot row */}
-                  <div className="grid grid-cols-[100px_1fr] gap-0 border-b">
-                    <div className="p-2 border-r text-sm font-medium bg-blue-50">
-                      <span className="text-xs text-muted-foreground">Day Slot</span>
-                    </div>
-                    <div className="grid gap-0" style={{ gridTemplateColumns: `repeat(${days.length}, 1fr)` }}>
-                      {days.map((day, dayIndex) => {
-                        const dayBookings = getBookingsForSeatAndDate(seat.id, day, 'day');
-                        return (
-                          <div key={dayIndex} className="border-l min-h-10 p-1">
-                            {dayBookings.map((booking, bookingIndex) => (
-                              <div
-                                key={bookingIndex}
-                                className={`text-xs p-1 rounded border mb-1 ${getBookingColor(booking)}`}
-                                title={`${booking.user_name} - Day slot - ${booking.status}`}
-                              >
-                                {formatBookingText(booking)}
+                      {/* Night slot row */}
+                      <div className="grid grid-cols-[100px_1fr] gap-0 border-b">
+                        <div className="p-2 border-r text-sm font-medium bg-purple-50">
+                          <span className="text-xs text-muted-foreground">Night</span>
+                        </div>
+                        <div className="grid gap-0" style={{ gridTemplateColumns: `repeat(${periods.length}, 1fr)` }}>
+                          {periods.map((period, periodIndex) => {
+                            const nightBookings = getBookingsForSeatAndPeriod(seat.id, period.start, period.end, 'night');
+                            return (
+                              <div key={periodIndex} className="border-l min-h-10 p-1">
+                                {nightBookings.map((booking, bookingIndex) => (
+                                  <div
+                                    key={bookingIndex}
+                                    className="text-xs p-1 rounded border mb-1 bg-green-200 text-green-800 border-green-300"
+                                    title={`${booking.user_name} - Night slot`}
+                                  >
+                                    {formatBookingText(booking)}
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Night slot row */}
-                  <div className="grid grid-cols-[100px_1fr] gap-0 border-b">
-                    <div className="p-2 border-r text-sm font-medium bg-purple-50">
-                      <span className="text-xs text-muted-foreground">Night Slot</span>
-                    </div>
-                    <div className="grid gap-0" style={{ gridTemplateColumns: `repeat(${days.length}, 1fr)` }}>
-                      {days.map((day, dayIndex) => {
-                        const nightBookings = getBookingsForSeatAndDate(seat.id, day, 'night');
-                        return (
-                          <div key={dayIndex} className="border-l min-h-10 p-1">
-                            {nightBookings.map((booking, bookingIndex) => (
-                              <div
-                                key={bookingIndex}
-                                className={`text-xs p-1 rounded border mb-1 ${getBookingColor(booking)}`}
-                                title={`${booking.user_name} - Night slot - ${booking.status}`}
-                              >
-                                {formatBookingText(booking)}
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -281,15 +304,7 @@ export const GanttChart = () => {
           <div className="mt-4 flex gap-4 text-sm">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-green-200 border border-green-300 rounded"></div>
-              <span>Confirmed & Paid</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-yellow-200 border border-yellow-300 rounded"></div>
-              <span>Pending</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-red-200 border border-red-300 rounded"></div>
-              <span>Issues</span>
+              <span>Confirmed & Paid Bookings</span>
             </div>
           </div>
         </CardContent>
