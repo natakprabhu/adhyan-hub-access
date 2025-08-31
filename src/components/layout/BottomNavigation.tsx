@@ -1,4 +1,4 @@
-import { Home, Calendar, User } from 'lucide-react';
+import { Home, MapPin, User } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -9,9 +9,9 @@ const navigationItems = [
     icon: Home,
   },
   {
-    name: 'Seat Plan',
-    href: '/seat-plan',
-    icon: Calendar,
+    name: 'My Seat',
+    href: '/my-seat',
+    icon: MapPin,
   },
   {
     name: 'Profile',

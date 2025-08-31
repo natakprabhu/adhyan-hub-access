@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { BookingWizard } from '@/components/BookingWizard';
+import NewMembershipBookingWizard from '@/components/NewMembershipBookingWizard';
 import { 
   Users, 
   MapPin, 
@@ -17,7 +17,7 @@ import {
   Droplets, 
   Volume2, 
   Lock, 
-  Moon,
+  Crown,
   Armchair
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -180,35 +180,38 @@ export default function Home() {
         </Card>
       )}
 
-      {/* Pricing Plans */}
+      {/* Membership Plans */}
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-center">Our Plans</h2>
+        <h2 className="text-2xl font-bold text-center">Our Membership Plans</h2>
         <div className="grid md:grid-cols-2 gap-6">
           <Card className="relative">
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle>12 Hour Plan</CardTitle>
-                <Badge variant="secondary">Popular</Badge>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Floating Seat
+                </CardTitle>
+                <Badge variant="secondary">Flexible</Badge>
               </div>
-              <div className="text-3xl font-bold">₹2,300<span className="text-sm font-normal">/month</span></div>
+              <div className="text-3xl font-bold">₹2,200<span className="text-sm font-normal">/month</span></div>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-primary" />
-                  Choose Day (9 AM - 9 PM) or Night (9 PM - 9 AM)
+                  24×7 access anytime
                 </li>
                 <li className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-primary" />
-                  Seats 14-50 available
+                  Any available seat (1-50)
                 </li>
                 <li className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-primary" />
-                  Flexible timing options
+                  First come, first served
                 </li>
                  <li className="flex items-center gap-2">
-                   <Lock className="h-4 w-4 text-primary" />
-                   <span className="line-through">Permanent Locker</span>
+                   <Lock className="h-4 w-4 text-muted-foreground" />
+                   <span className="line-through text-muted-foreground">Personal Locker</span>
                  </li>
               </ul>
             </CardContent>
@@ -217,28 +220,31 @@ export default function Home() {
           <Card className="relative border-primary">
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle>24 Hour Plan</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Crown className="h-5 w-5" />
+                  Fixed Seat
+                </CardTitle>
                 <Badge>Premium</Badge>
               </div>
-              <div className="text-3xl font-bold">₹3,800<span className="text-sm font-normal">/month</span></div>
+              <div className="text-3xl font-bold">₹3,300<span className="text-sm font-normal">/month</span></div>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2">
-                  <Moon className="h-4 w-4 text-primary" />
-                  24/7 access anytime
+                  <Clock className="h-4 w-4 text-primary" />
+                  24×7 access anytime
                 </li>
                 <li className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-primary" />
-                  Premium seats 1-13
+                  Dedicated seat (1-50)
                 </li>
                 <li className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-primary" />
-                  Unlimited study hours
+                  Your personal seat
                 </li>
                 <li className="flex items-center gap-2">
                   <Lock className="h-4 w-4 text-primary" />
-                  Double Locker and Fixed Seat
+                  Personal locker included
                 </li>
               </ul>
             </CardContent>
@@ -289,30 +295,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Seat Statistics */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Seats</CardTitle>
-            <Armchair className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{seatStats.total}</div>
-            <p className="text-xs text-muted-foreground">Library capacity</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Available</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-seat-available">{seatStats.available}</div>
-            <p className="text-xs text-muted-foreground">Ready to book</p>
-          </CardContent>
-        </Card>
-      </div>
 
       <div className="text-center">
         <Button 
@@ -372,7 +354,7 @@ export default function Home() {
       )}
 
       {showBookingWizard && (
-        <BookingWizard
+        <NewMembershipBookingWizard
           isOpen={showBookingWizard}
           onClose={() => setShowBookingWizard(false)}
           onBookingComplete={fetchData}
