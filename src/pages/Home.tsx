@@ -317,13 +317,24 @@ export default function Home() {
                   <div className="flex justify-between items-start">
                     <div className="space-y-1">
                       <div className="font-medium">
-                        Seat {booking.seat_number} • {booking.type === '24hr' ? '24 Hour' : '12 Hour'}
+                        {booking.seat_category === 'floating' ? (
+                          <>
+                            Any Available Seat • Floating • ₹2200/month
+                          </>
+                        ) : (
+                          <>
+                            Seat {booking.seat_number} • Fixed • ₹3300/month
+                          </>
+                        )}
+                        {" • "}
+                        {booking.type === '24hr' ? '24 Hour' : '12 Hour'}
                         {booking.slot && booking.slot !== 'full' && (
                           <span className="text-muted-foreground ml-1">
                             ({booking.slot === 'day' ? 'Day Time' : 'Night Time'})
                           </span>
                         )}
                       </div>
+
 
                       <div className="text-sm text-muted-foreground">
                         {format(new Date(booking.start_time), 'MMM yyyy')} - {format(new Date(booking.end_time), 'MMM yyyy')}
