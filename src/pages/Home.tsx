@@ -157,18 +157,13 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 space-y-8">
-      <header className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-primary">Welcome to Adhyan Library</h1>
-          <p className="text-muted-foreground">
-            Hello, {userProfile?.name || 'Loading...'}!
-          </p>
-        </div>
-        <Button variant="ghost" size="sm" onClick={handleSignOut}>
-          Sign Out
-        </Button>
-      </header>
+    <div className="bg-background p-4 space-y-8">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-primary">Welcome to Adhyan Library</h1>
+        <p className="text-muted-foreground">
+          Hello, {userProfile?.name || 'Loading...'}!
+        </p>
+      </div>
 
       {userProfile && !userProfile.approved && (
         <Card className="border-amber-200 bg-amber-50">

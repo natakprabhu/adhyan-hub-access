@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { MapPin, Clock, Calendar, User, Crown, Users, AlertCircle } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import { MapPin, Clock, Calendar, User, Crown, Users, AlertCircle, Edit, Phone } from 'lucide-react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { Header } from '@/components/Header';
 
 interface ActiveBooking {
   id: string;
@@ -25,7 +26,9 @@ interface ActiveBooking {
 
 export default function MySeat() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeBooking, setActiveBooking] = useState<ActiveBooking | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [daysRemaining, setDaysRemaining] = useState(0);
   const { toast } = useToast();
@@ -49,11 +52,13 @@ export default function MySeat() {
     try {
       const { data: profile } = await supabase
         .from('users')
-        .select('id')
+        .select('*')
         .eq('auth_user_id', user?.id)
         .single();
 
       if (!profile) throw new Error('Profile not found');
+      
+      setUserProfile(profile);
 
       const { data, error } = await supabase
         .from('bookings')
@@ -154,12 +159,88 @@ export default function MySeat() {
     );
   }
 
+  // Get masked phone number
+  const getMaskedPhone = (phone: string) => {
+    if (!phone || phone.length < 4) return 'XXXX';
+    return 'XXXX' + phone.slice(-4);
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">My Seat</h1>
-          <p className="text-muted-foreground">Your current membership details</p>
+      <Header title="My ID Card" showBack={true} />
+      
+      <div className="container mx-auto px-4 py-6 max-w-md">
+        {/* ID Card */}
+        <div className="relative mb-6">
+          <Card className="bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-white border-0 shadow-2xl overflow-hidden">
+            {/* Library Stamp Overlay */}
+            <div className="absolute top-4 right-4 opacity-20 rotate-12">
+              <div className="border-2 border-white rounded-full p-3">
+                <div className="text-xs font-bold text-center">
+                  ADHYAN<br/>LIBRARY
+                </div>
+              </div>
+            </div>
+            
+            <CardHeader className="pb-4">
+              <div className="flex items-center space-x-4">
+                {/* Profile Picture */}
+                <div className="relative">
+                  <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
+                    <User className="h-10 w-10 text-white/80" />
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="absolute -bottom-2 -right-2 h-6 w-6 p-0 rounded-full"
+                    onClick={() => navigate('/profile')}
+                  >
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                </div>
+                
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold">{userProfile?.name || 'Loading...'}</h2>
+                  <p className="text-white/80 text-sm">Member ID: {userProfile?.id?.slice(-8)?.toUpperCase()}</p>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-white/60 text-xs uppercase tracking-wide">Membership Type</p>
+                  <p className="font-semibold capitalize">{activeBooking.seat_category} Seat</p>
+                </div>
+                <div>
+                  <p className="text-white/60 text-xs uppercase tracking-wide">Seat Number</p>
+                  <p className="font-semibold">
+                    {activeBooking.seat_category === 'fixed' 
+                      ? `${activeBooking.seat?.seat_number}`
+                      : 'Floating'
+                    }
+                  </p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-white/60 text-xs uppercase tracking-wide">Booking Date</p>
+                  <p className="font-semibold">{formatDate(activeBooking.membership_start_date)}</p>
+                </div>
+                <div>
+                  <p className="text-white/60 text-xs uppercase tracking-wide">Phone</p>
+                  <p className="font-semibold">{getMaskedPhone(userProfile?.phone || '')}</p>
+                </div>
+              </div>
+              
+              {/* Days Remaining - Large Display */}
+              <div className="bg-white/10 rounded-lg p-4 text-center mt-4">
+                <div className="text-3xl font-bold animate-pulse">{daysRemaining}</div>
+                <div className="text-sm text-white/80">Days Remaining</div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid gap-6">

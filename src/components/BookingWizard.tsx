@@ -21,7 +21,7 @@ interface BookingWizardProps {
 interface Seat {
   id: string;
   seat_number: number;
-  type: string;
+  created_at: string;
 }
 
 interface SeatStatus {

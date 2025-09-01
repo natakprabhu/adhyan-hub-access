@@ -105,7 +105,7 @@ export type Database = {
           receipt_sent: boolean | null
           receipt_sent_at: string | null
           seat_category: string
-          seat_id: string
+          seat_id: string | null
           slot: string | null
           start_time: string
           status: string | null
@@ -128,7 +128,7 @@ export type Database = {
           receipt_sent?: boolean | null
           receipt_sent_at?: string | null
           seat_category: string
-          seat_id: string
+          seat_id?: string | null
           slot?: string | null
           start_time: string
           status?: string | null
@@ -151,7 +151,7 @@ export type Database = {
           receipt_sent?: boolean | null
           receipt_sent_at?: string | null
           seat_category?: string
-          seat_id?: string
+          seat_id?: string | null
           slot?: string | null
           start_time?: string
           status?: string | null
@@ -211,19 +211,16 @@ export type Database = {
           created_at: string
           id: string
           seat_number: number
-          type: string
         }
         Insert: {
           created_at?: string
           id?: string
           seat_number: number
-          type: string
         }
         Update: {
           created_at?: string
           id?: string
           seat_number?: number
-          type?: string
         }
         Relationships: []
       }

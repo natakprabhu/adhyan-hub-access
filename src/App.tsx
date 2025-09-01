@@ -12,6 +12,8 @@ import Index from "./pages/Index";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import SeatPlan from "./pages/SeatPlan";
+import MySeat from "./pages/MySeat";
+import IDCard from "./pages/IDCard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { AdminLogin } from "./pages/admin/AdminLogin";
@@ -32,7 +34,11 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/home" element={<ProtectedRoute><MobileLayout><Home /></MobileLayout></ProtectedRoute>} />
               <Route path="/seat-plan" element={<ProtectedRoute><MobileLayout><SeatPlan /></MobileLayout></ProtectedRoute>} />
+              <Route path="/my-seat" element={<ProtectedRoute><MobileLayout><MySeat /></MobileLayout></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><MobileLayout><Profile /></MobileLayout></ProtectedRoute>} />
+              
+              {/* Public ID Card Route */}
+              <Route path="/phone/:phoneNumber" element={<IDCard />} />
               
               {/* Admin Routes */}
               <Route path="/superman/login" element={<AdminLogin />} />
