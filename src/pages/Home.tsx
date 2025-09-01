@@ -45,6 +45,7 @@ interface RecentBooking {
   status: string;
   payment_status: string;
   created_at: string;
+  seat_category?: string;   
 }
 
 export default function Home() {
@@ -119,17 +120,19 @@ export default function Home() {
           .order('created_at', { ascending: false })
           .limit(5);
 
-        const formattedBookings: RecentBooking[] = bookings?.map(booking => ({
-          id: booking.id,
-          seat_number: booking.seats?.seat_number || 0,
-          type: booking.type,
-          slot: booking.slot,
-          start_time: booking.start_time,
-          end_time: booking.end_time,
-          status: booking.status,
-          payment_status: booking.payment_status,
-          created_at: booking.created_at,
-        })) || [];
+          const formattedBookings: RecentBooking[] = bookings?.map(booking => ({
+            id: booking.id,
+            seat_number: booking.seats?.seat_number || 0,
+            type: booking.type,
+            slot: booking.slot,
+            seat_category: booking.seat_category,   // add this
+            start_time: booking.start_time,
+            end_time: booking.end_time,
+            status: booking.status,
+            payment_status: booking.payment_status,
+            created_at: booking.created_at,
+          })) || [];
+
 
         setRecentBookings(formattedBookings);
       }
@@ -321,6 +324,7 @@ export default function Home() {
                           </span>
                         )}
                       </div>
+
                       <div className="text-sm text-muted-foreground">
                         {format(new Date(booking.start_time), 'MMM yyyy')} - {format(new Date(booking.end_time), 'MMM yyyy')}
                       </div>
