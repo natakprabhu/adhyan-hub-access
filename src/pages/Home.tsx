@@ -316,44 +316,70 @@ export default function Home() {
                 <CardContent className="pt-4">
                   <div className="flex justify-between items-start">
                     <div className="space-y-1">
-                      <div className="font-medium">
-                        {booking.seat_category === 'floating' ? (
-                          <>
-                            Any Available Seat • Floating • ₹2200/month
-                          </>
-                        ) : (
-                          <>
-                            Seat {booking.seat_number} • Fixed • ₹3300/month
-                          </>
-                        )}
-                        {" • "}
-                        {booking.type === '24hr' ? '24 Hour' : '12 Hour'}
-                        {booking.slot && booking.slot !== 'full' && (
-                          <span className="text-muted-foreground ml-1">
-                            ({booking.slot === 'day' ? 'Day Time' : 'Night Time'})
-                          </span>
-                        )}
-                      </div>
+                      <div className="p-4 border rounded-xl shadow-sm bg-white space-y-3">
+  {/* Seat Info + Seat Type Badge */}
+  <div className="flex items-center justify-between">
+    <span className="font-semibold text-lg">
+      {booking.seat_category === "floating"
+        ? "Any Available Seat"
+        : `Seat ${booking.seat_number}`}
+    </span>
+    <span
+      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+        booking.seat_category === "floating"
+          ? "bg-blue-100 text-blue-800"
+          : "bg-green-100 text-green-800"
+      }`}
+    >
+      {booking.seat_category === "floating" ? "Floating" : "Fixed"}
+    </span>
+  </div>
 
+  {/* Price + Booking Type */}
+  <div className="text-sm text-muted-foreground">
+    {booking.seat_category === "floating" ? "₹2200 / month" : "₹3300 / month"}
+  </div>
+  <div className="text-sm font-medium">
+    {booking.type === "24hr" ? "24 Hour Access" : "12 Hour Access"}{" "}
+    {booking.slot && booking.slot !== "full" && (
+      <span className="text-muted-foreground">
+        ({booking.slot === "day" ? "Day Time" : "Night Time"})
+      </span>
+    )}
+  </div>
 
-                      <div className="text-sm text-muted-foreground">
-                        {format(new Date(booking.start_time), 'MMM yyyy')} - {format(new Date(booking.end_time), 'MMM yyyy')}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Booked on {format(new Date(booking.created_at), 'MMM d, yyyy')}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Badge variant={
-                        booking.status === 'confirmed' ? 'default' :
-                        booking.status === 'pending' ? 'secondary' : 'destructive'
-                      }>
-                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {booking.payment_status === 'completed' ? 'Paid' : 
-                         booking.payment_status === 'pending' ? 'Payment Pending' : 'Payment Failed'}
-                      </Badge>
+  {/* Payment Status Badge */}
+  <div>
+    {(() => {
+      const status = booking.payment_status?.toLowerCase();
+      let statusLabel = "Payment Failed";
+      let statusClasses = "bg-red-100 text-red-700";
+
+      if (status === "paid" || status === "success") {
+        statusLabel = "Paid";
+        statusClasses = "bg-green-100 text-green-700";
+      } else if (status === "pending") {
+        statusLabel = "Pending";
+        statusClasses = "bg-yellow-100 text-yellow-700";
+      }
+
+      return (
+        <span
+          className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses}`}
+        >
+          {statusLabel}
+        </span>
+      );
+    })()}
+  </div>
+
+  {/* Dates */}
+  <div className="text-xs text-muted-foreground">
+    {new Date(booking.start_time).toLocaleDateString()} →{" "}
+    {new Date(booking.end_time).toLocaleDateString()}
+  </div>
+</div>
+
                     </div>
                   </div>
                 </CardContent>
