@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import Header from "@/components/Header";
 import Auth from './Auth';
 
 const Index = () => {
@@ -19,8 +20,15 @@ const Index = () => {
     return <Navigate to="/home" replace />;
   }
 
-  // If not logged in, show login page
-  return <Auth />;
+  // If not logged in, show login page with header
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="flex items-center justify-center p-6">
+        <Auth />
+      </div>
+    </div>
+  );
 };
 
 export default Index;
