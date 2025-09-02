@@ -21,6 +21,7 @@ import {
   Armchair
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { RulesModal } from '@/components/RulesModal';
 
 interface UserProfile {
   id: string;
@@ -293,16 +294,17 @@ export default function Home() {
       </div>
 
 
-      <div className="text-center">
+      <div className="text-center space-y-3">
         <Button 
           size="lg" 
           onClick={() => setShowBookingWizard(true)}
-          disabled={!userProfile?.approved}
           className="w-full"
         >
           <Calendar className="mr-2 h-5 w-5" />
           Book a Seat
         </Button>
+        
+        <RulesModal />
       </div>
 
 {/* Recent Bookings */}
@@ -318,7 +320,7 @@ export default function Home() {
               <div className="space-y-2">
                 {/* Seat Details */}
                 <div className="font-medium text-base">
-                  {booking.seat_category?.toLowerCase() === "floating"
+                  {booking.type?.toLowerCase() === "floating"
                     ? "Any Available Seat"
                     : `Seat ${booking.seat_number || "-"}`}
                 </div>
@@ -327,15 +329,15 @@ export default function Home() {
                 <div className="flex flex-wrap gap-2">
                   <Badge
                     className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                      booking.seat_category?.toLowerCase() === "floating"
+                      booking.type?.toLowerCase() === "floating"
                         ? "bg-blue-500 text-white"
                         : "bg-green-500 text-white"
                     }`}
                   >
-                    {booking.seat_category?.toLowerCase() === "floating"
+                    {booking.type?.toLowerCase() === "floating"
                       ? "Floating Seat"
                       : "Fixed Seat"}
-                  </Badge>             
+                  </Badge>
                 </div>
 
                 {/* Dates */}

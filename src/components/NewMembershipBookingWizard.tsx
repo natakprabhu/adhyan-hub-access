@@ -275,8 +275,8 @@ useEffect(() => {
 let startDate: Date;
 let endDate: Date;
 
-if (seatAvailability?.nextAvailable) {
-  startDate = new Date(seatAvailability.nextAvailable);
+if (seatAvailability?.next_available_date) {
+  startDate = new Date(seatAvailability.next_available_date);
 } else {
   startDate = new Date(); // fallback if no availability info
 }

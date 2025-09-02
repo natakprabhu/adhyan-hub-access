@@ -106,6 +106,7 @@ export type Database = {
           receipt_sent_at: string | null
           seat_category: string
           seat_id: string | null
+          seat_number: number | null
           slot: string | null
           start_time: string
           status: string | null
@@ -129,6 +130,7 @@ export type Database = {
           receipt_sent_at?: string | null
           seat_category: string
           seat_id?: string | null
+          seat_number?: number | null
           slot?: string | null
           start_time: string
           status?: string | null
@@ -152,6 +154,7 @@ export type Database = {
           receipt_sent_at?: string | null
           seat_category?: string
           seat_id?: string | null
+          seat_number?: number | null
           slot?: string | null
           start_time?: string
           status?: string | null
