@@ -320,6 +320,7 @@ export default function Home() {
               <div className="space-y-2">
                 {/* Seat Details */}
                 <div className="font-medium text-base">
+                  {console.log(booking);}
                   {booking.type?.toLowerCase() === "floating"
                     ? "Any Available Seat"
                     : `Seat ${booking.seat_number || "-"}`}
