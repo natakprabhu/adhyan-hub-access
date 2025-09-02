@@ -55,33 +55,35 @@ export default function NewMembershipBookingWizard({
     return calculateMonthlyCost() * duration;
   };
 
-  const checkSeatAvailability = async (seatNumber: number) => {
-    setIsLoading(true);
-    try {
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + duration);
+const checkSeatAvailability = async (seatNumber: number) => {
+  setIsLoading(true);
+  try {
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + duration);
 
-      const { data, error } = await supabase.rpc('check_seat_availability', {
-        seat_number_param: seatNumber,
-        start_date_param: startDate.toISOString().split('T')[0],
-        end_date_param: endDate.toISOString().split('T')[0],
-      });
+    const { data, error } = await supabase.rpc('check_seat_availability', {
+      seat_number_param: seatNumber,
+      start_date_param: startDate.toISOString().split('T')[0],
+      end_date_param: endDate.toISOString().split('T')[0],
+    });
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setSeatAvailability(data[0]);
-    } catch (error) {
-      console.error('Error checking seat availability:', error);
-      toast({
-        title: "Error",
-        description: "Failed to check seat availability",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    console.log("Seat Availability fetched:", data[0]);
+    setSeatAvailability(data[0]);
+  } catch (error) {
+    console.error('Error checking seat availability:', error);
+    toast({
+      title: "Error",
+      description: "Failed to check seat availability",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleSeatSelection = async () => {
     if (!selectedSeat) return;
@@ -146,7 +148,8 @@ export default function NewMembershipBookingWizard({
     }
   };
 
-  const nextStep = () => {
+
+  const nextStep = async () => {
     if (step === 1 && selectedCategory) {
       setStep(2);
     } else if (step === 2 && selectedCategory === 'floating') {
@@ -154,7 +157,8 @@ export default function NewMembershipBookingWizard({
     } else if (step === 2 && selectedCategory === 'fixed') {
       setStep(3);
     } else if (step === 3 && selectedSeat) {
-      handleSeatSelection();
+      // Wait for seat availability before moving to step 4
+      await handleSeatSelection(); 
       setStep(4);
     } else if (step === 4) {
       setStep(5);
@@ -168,6 +172,120 @@ export default function NewMembershipBookingWizard({
       setStep(step - 1);
     }
   };
+  
+  const [allSeats] = useState<number[]>(Array.from({ length: 50 }, (_, i) => i + 1));
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [seatStatus, setSeatStatus] = useState<any[]>([]);
+ 
+    useEffect(() => {
+      const fetchBookings = async () => {
+        const today = new Date().toISOString().split('T')[0];
+
+      const { data, error } = await supabase
+      .from('bookings')
+      .select(`
+        seat_id,
+        seats!inner(seat_number),
+        membership_start_date,
+        membership_end_date,
+        status
+      `)
+      .in('status', ['confirmed', 'approved']);
+
+
+        if (error) {
+          console.error("Error fetching bookings:", error);
+        } else {
+          console.log("Fetched bookings:", data);
+          setBookings(data || []);
+        }
+      };
+
+      fetchBookings();
+    }, []);
+
+useEffect(() => {
+  const today = new Date();
+
+  const status = allSeats.map(seat => {
+    // Find booking for this seat
+    const booking = bookings.find(b => b.seats?.seat_number === seat);
+
+    if (!booking) {
+      return {
+        seatNumber: seat,
+        available: true,
+        nextAvailable: null,
+      };
+    }
+
+    const start = new Date(booking.membership_start_date);
+    const end = new Date(booking.membership_end_date);
+
+    return {
+      seatNumber: seat,
+      available: today < start || today > end, // true if not within booking period
+      nextAvailable: today >= start && today <= end ? booking.membership_end_date : null,
+    };
+  });
+
+  setSeatStatus(status);
+}, [bookings, allSeats]);
+
+useEffect(() => {
+  const today = new Date();
+
+  const status = allSeats.map(seat => {
+    // Find active booking for this seat
+    const booking = bookings.find(b => {
+      const start = new Date(b.membership_start_date);
+      const end = new Date(b.membership_end_date);
+      return b.seats?.seat_number === seat && start <= today && today <= end;
+    });
+
+    if (!booking) {
+      return {
+        seatNumber: seat,
+        available: true,
+        nextAvailable: null,
+      };
+    }
+
+    // Format end date as "23 Jan 2025"
+    const endDate = new Date(booking.membership_end_date);
+    const formattedDate = endDate.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+
+    return {
+      seatNumber: seat,
+      available: false,
+      nextAvailable: formattedDate,
+    };
+  });
+
+  setSeatStatus(status);
+}, [bookings, allSeats]);
+
+
+
+// Calculate membership duration based on seat availability
+let startDate: Date;
+let endDate: Date;
+
+if (seatAvailability?.nextAvailable) {
+  startDate = new Date(seatAvailability.nextAvailable);
+} else {
+  startDate = new Date(); // fallback if no availability info
+}
+
+endDate = new Date(startDate);
+endDate.setMonth(endDate.getMonth() + duration);
+
+console.log("Membership Start Date:", startDate.toISOString());
+console.log("Membership End Date:", endDate.toISOString());
 
   const totalSteps = 5;
 
@@ -275,56 +393,42 @@ export default function NewMembershipBookingWizard({
 
           {/* Step 2: Seat Selection for Fixed OR Note for Floating */}
           {step === 2 && selectedCategory === 'fixed' && (
-            <div className="space-y-6">
-              <h3 className="text-xl font-semibold text-center">Select Your Seat Number</h3>
-              <div className="max-w-md mx-auto space-y-4">
-                <div className="space-y-3">
-                  <Label htmlFor="seat" className="text-base">Seat Number (1-50)</Label>
-                  <Input
-                    id="seat"
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={selectedSeat || ''}
-                    onChange={(e) => setSelectedSeat(parseInt(e.target.value) || null)}
-                    placeholder="Enter seat number"
-                    className="text-center text-lg h-12"
-                  />
-                </div>
-                
-                <Card className="bg-primary/5 border-primary/20">
-                  <CardContent className="pt-6">
-                    <div className="text-center space-y-2">
-                      <div className="text-2xl font-bold text-primary">₹3,300 per month</div>
-                      <p className="text-sm text-muted-foreground">Personal seat with locker included</p>
-                    </div>
-                  </CardContent>
-                </Card>
+          <div className="space-y-6">
+            <h3 className="text-xl font-semibold text-center">Select Your Seat Number</h3>
+            <div className="max-w-md mx-auto space-y-4">
+              <div className="space-y-3">
+              <Label htmlFor="seat" className="text-base font-semibold">Seat Number (1-50)</Label>
+              <select
+    id="seat"
+    value={selectedSeat || ''}
+    onChange={(e) => setSelectedSeat(parseInt(e.target.value))}
+    className="text-center text-lg h-12 w-full border rounded-md px-2"
+  >
+    {seatStatus.map(s => (
+      <option key={s.seatNumber} value={s.seatNumber}>
+       {`Seat ${s.seatNumber} ${s.available ? '(Available Now)' : `(Available from ${s.nextAvailable})`}`}
 
-                {seatAvailability && !seatAvailability.is_available && (
-                  <Card className="border-yellow-200 bg-yellow-50">
-                    <CardContent className="pt-6">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="h-6 w-6 text-yellow-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="font-medium text-yellow-800">Seat Not Available</p>
-                          <p className="text-sm text-yellow-700 mt-1">
-                            This seat is occupied until {seatAvailability.conflicting_booking_end}. 
-                          </p>
-                          <p className="text-sm text-yellow-700">
-                            Next available from: {seatAvailability.next_available_date}
-                          </p>
-                          <p className="text-sm text-yellow-700 mt-2">
-                            Please choose another seat or book from the next available date.
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+      </option>
+    ))}
+  </select>
+
+
+
+            
+                </div>
+              
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="text-center space-y-2">
+                    <div className="text-2xl font-bold text-primary">₹3,300 per month</div>
+                    <p className="text-sm text-muted-foreground">Personal seat with locker included</p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          )}
+          </div>
+        )}
+
 
           {step === 2 && selectedCategory === 'floating' && (
             <div className="space-y-6">
@@ -375,48 +479,76 @@ export default function NewMembershipBookingWizard({
           )}
 
           {/* Step 4: Order Summary */}
-          {step === 4 && (
-            <div className="space-y-6">
-              <h3 className="text-xl font-semibold text-center">Order Summary</h3>
-              <div className="max-w-lg mx-auto">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-center">Booking Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                        <span className="font-medium">Seat Type:</span>
-                        <Badge variant="default" className="capitalize">
-                          {selectedCategory} Seat
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                        <span className="font-medium">Seat Number:</span>
-                        <span className="font-bold">
-                          {selectedCategory === 'fixed' ? `Seat ${selectedSeat}` : 'Any Available Seat'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                        <span className="font-medium">Cost per Month:</span>
-                        <span className="font-bold text-primary">₹{calculateMonthlyCost().toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                        <span className="font-medium">Duration:</span>
-                        <span className="font-bold">{duration} Month{duration > 1 ? 's' : ''}</span>
-                      </div>
-                    </div>
-                    <div className="border-t pt-4">
-                      <div className="flex justify-between items-center text-xl">
-                        <span className="font-bold">Total Cost:</span>
-                        <span className="font-bold text-primary text-2xl">₹{calculateTotalCost().toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          )}
+{/* Step 4: Order Summary */}
+{step === 4 && (
+  <div className="space-y-6">
+    <h3 className="text-xl font-semibold text-center">Order Summary</h3>
+    <div className="max-w-lg mx-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-center">Booking Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Calculate membership start and end dates */}
+          {(() => {
+            let startDate: Date;
+            let endDate: Date;
+
+            if (selectedCategory === 'fixed' && seatAvailability?.next_available_date) {
+              startDate = new Date(seatAvailability.next_available_date);
+            } else {
+              startDate = new Date(); // fallback for floating
+            }
+
+            endDate = new Date(startDate);
+            endDate.setMonth(endDate.getMonth() + duration);
+
+            return (
+              <>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                    <span className="font-medium">Seat Type:</span>
+                    <Badge variant="default" className="capitalize">
+                      {selectedCategory} Seat
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                    <span className="font-medium">Seat Number:</span>
+                    <span className="font-bold">
+                      {selectedCategory === 'fixed' ? `Seat ${selectedSeat}` : 'Any Available Seat'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                    <span className="font-medium">Cost per Month:</span>
+                    <span className="font-bold text-primary">₹{calculateMonthlyCost().toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                    <span className="font-medium">Duration:</span>
+                    <span className="font-bold">{duration} Month{duration > 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                    <span className="font-medium">Membership Duration:</span>
+                    <span className="font-bold">
+                      {startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {" "}to{" "}
+                      {endDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+                </div>
+                <div className="border-t pt-4">
+                  <div className="flex justify-between items-center text-xl">
+                    <span className="font-bold">Total Cost:</span>
+                    <span className="font-bold text-primary text-2xl">₹{calculateTotalCost().toLocaleString()}</span>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </CardContent>
+      </Card>
+    </div>
+  </div>
+)}
 
           {/* Step 5: Confirmation Message */}
           {step === 5 && (
