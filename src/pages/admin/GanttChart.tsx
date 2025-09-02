@@ -41,9 +41,9 @@ export const GanttChart = () => {
 
       setSeats(seatsData || []);
 
-      // Get bookings for the next 12 months starting from current month
-      const startDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
-      const endDate = new Date(selectedMonth.getFullYear() + 1, selectedMonth.getMonth(), 0);
+      // Get bookings for the entire year
+      const startOfYear = new Date(selectedMonth.getFullYear(), 0, 1);
+      const endOfYear = new Date(selectedMonth.getFullYear(), 11, 31);
 
       const { data: bookingsData } = await supabase
         .from('bookings')
@@ -52,8 +52,8 @@ export const GanttChart = () => {
           users (name),
           seats (seat_number)
         `)
-        .gte('start_time', startDate.toISOString())
-        .lte('end_time', endDate.toISOString())
+        .gte('start_time', startOfYear.toISOString())
+        .lte('end_time', endOfYear.toISOString())
         .eq('status', 'confirmed')
         .eq('payment_status', 'paid')
         .order('start_time');
@@ -84,32 +84,27 @@ export const GanttChart = () => {
     }
   };
 
-  // Get 15-day periods starting from current month
+  // Get 15-day periods for the year
   const get15DayPeriods = () => {
     const year = selectedMonth.getFullYear();
-    const currentMonth = selectedMonth.getMonth();
     const periods = [];
     
-    // Start from current month and go for 12 months
-    for (let i = 0; i < 12; i++) {
-      const month = (currentMonth + i) % 12;
-      const yearForThisMonth = currentMonth + i >= 12 ? year + 1 : year;
-      
-      const monthStart = new Date(yearForThisMonth, month, 1);
+    for (let month = 0; month < 12; month++) {
+      const monthStart = new Date(year, month, 1);
       const monthName = monthStart.toLocaleDateString('en-US', { month: 'short' });
       
       // First half (1-15)
       periods.push({
-        start: new Date(yearForThisMonth, month, 1),
-        end: new Date(yearForThisMonth, month, 15),
+        start: new Date(year, month, 1),
+        end: new Date(year, month, 15),
         label: `${monthName} 1-15`
       });
       
       // Second half (16-end)
-      const lastDay = new Date(yearForThisMonth, month + 1, 0).getDate();
+      const lastDay = new Date(year, month + 1, 0).getDate();
       periods.push({
-        start: new Date(yearForThisMonth, month, 16),
-        end: new Date(yearForThisMonth, month, lastDay),
+        start: new Date(year, month, 16),
+        end: new Date(year, month, lastDay),
         label: `${monthName} 16-${lastDay}`
       });
     }
@@ -190,7 +185,7 @@ export const GanttChart = () => {
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="font-medium min-w-32 text-center">
-                  {selectedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - Next 12 Months
+                  {selectedMonth.getFullYear()}
                 </span>
                 <Button variant="outline" size="sm" onClick={() => navigateYear('next')}>
                   <ChevronRight className="h-4 w-4" />
