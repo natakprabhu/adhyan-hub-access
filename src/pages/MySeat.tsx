@@ -173,51 +173,71 @@ export default function MySeat() {
         {/* ID Card */}
         <div className="relative mb-6">
           <Card className="bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-white border-0 shadow-2xl overflow-hidden">
+
             {/* Library Stamp Overlay */}
-            <div className="absolute top-4 right-4 opacity-20 rotate-12">
-              <div className="border-2 border-white rounded-full p-3">
-                <div className="text-xs font-bold text-center">
+            <div className="absolute -top-6 -right-6 rotate-12">
+              <div className="relative w-28 h-28 rounded-full flex items-center justify-center">
+                {/* Outer Circle */}
+                <div className="absolute inset-0 rounded-full border-4 border-black opacity-70"></div>
+                {/* Inner Circle */}
+                <div className="absolute inset-2 rounded-full border-2 border-black opacity-60"></div>
+
+                {/* Text */}
+                <div className="text-[17px] font-extrabold uppercase tracking-widest text-black text-center leading-tight opacity-70">
                   ADHYAN<br/>LIBRARY
+                </div>
+
+                {/* Distressed / Grainy Effect */}
+                <div className="absolute inset-0 rounded-full mix-blend-multiply opacity-25"
+                     style={{
+                       backgroundImage: "url('https://www.transparenttextures.com/patterns/noise.png')",
+                       backgroundSize: "150px 150px"
+                     }}>
                 </div>
               </div>
             </div>
-            
-            <CardHeader className="pb-4">
-              <div className="flex items-center space-x-4">
-                {/* Profile Picture */}
-                <div className="relative">
-                  <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
-                    <User className="h-10 w-10 text-white/80" />
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="absolute -bottom-2 -right-2 h-6 w-6 p-0 rounded-full"
-                    onClick={() => navigate('/profile')}
-                  >
-                    <Edit className="h-3 w-3" />
-                  </Button>
+
+
+
+
+
+            <CardHeader className="pb-4 flex flex-col items-center text-center">
+              {/* Profile Picture */}
+              <div className="relative mb-3">
+                <div className="w-28 h-28 bg-white/20 rounded-full flex items-center justify-center border-2 border-white/40 shadow-md">
+                  <User className="h-14 w-14 text-white/80" />
                 </div>
-                
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold">{userProfile?.name || 'Loading...'}</h2>
-                  <p className="text-white/80 text-sm">Member ID: {userProfile?.id?.slice(-8)?.toUpperCase()}</p>
-                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="absolute -bottom-2 -right-2 h-7 w-7 p-0 rounded-full shadow"
+                  onClick={() => navigate("/profile")}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
               </div>
+
+              {/* User Info */}
+              <h2 className="text-xl font-bold">
+                {userProfile?.name || "Loading..."}
+              </h2>
+              <p className="text-white/80 text-sm">
+                Member ID: {userProfile?.id?.slice(-8)?.toUpperCase()}
+              </p>
             </CardHeader>
             
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-white/60 text-xs uppercase tracking-wide">Membership Type</p>
-                  <p className="font-semibold capitalize">{activeBooking.seat_category} Seat</p>
+                  <p className="font-semibold capitalize"><span className="bg-yellow-300 text-black font-semibold px-3 py-1 rounded-md">{activeBooking.seat_category} </span> </p>
                 </div>
                 <div>
                   <p className="text-white/60 text-xs uppercase tracking-wide">Seat Number</p>
                   <p className="font-semibold">
                     {activeBooking.seat_category === 'fixed' 
                       ? `${activeBooking.seat?.seat_number}`
-                      : 'Floating'
+                      : 'Any Available Seat'
                     }
                   </p>
                 </div>
@@ -282,18 +302,7 @@ export default function MySeat() {
                       </p>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="font-medium">Membership Period</p>
-                      <p className="text-muted-foreground">
-                        {formatDate(activeBooking.membership_start_date)} - {formatDate(activeBooking.membership_end_date)}
-                      </p>
-                    </div>
-                  </div>
                 </div>
-
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
                     <Clock className="h-5 w-5 text-primary" />
@@ -302,15 +311,19 @@ export default function MySeat() {
                       <p className="text-muted-foreground">24×7 Access</p>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="font-medium">Monthly Cost</p>
-                      <p className="text-muted-foreground">₹{activeBooking.monthly_cost.toLocaleString()}</p>
+                </div>
+                <div className="col-span-full w-full">
+                  <div className="flex items-center gap-3 p-4 rounded-lg border bg-card shadow-sm w-full">
+                    <Calendar className="h-6 w-6 text-primary flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="font-medium">Membership Period</p>
+                      <p className="text-muted-foreground">
+                        {formatDate(activeBooking.membership_start_date)} – {formatDate(activeBooking.membership_end_date)}
+                      </p>
                     </div>
                   </div>
                 </div>
+
               </div>
             </CardContent>
           </Card>
@@ -335,7 +348,7 @@ export default function MySeat() {
                   </Badge>
                 )}
                 
-                {daysRemaining > 7 && daysRemaining <= 30 && (
+                {daysRemaining > 1 && daysRemaining <= 7 && (
                   <Badge variant="secondary" className="text-sm px-4 py-2">
                     Renewal Reminder
                   </Badge>
@@ -343,85 +356,6 @@ export default function MySeat() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Status Cards */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Badge variant="default" className="h-6 w-6 rounded-full p-0">
-                    ✓
-                  </Badge>
-                  Membership Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span>Status:</span>
-                    <Badge variant="default">Active</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Payment:</span>
-                    <Badge variant="default">Paid</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Duration:</span>
-                    <span>{activeBooking.duration_months} month{activeBooking.duration_months > 1 ? 's' : ''}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Membership Benefits</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span>24×7 facility access</span>
-                  </div>
-                  {activeBooking.seat_category === 'fixed' && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>Personal locker included</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span>High-speed WiFi</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span>Climate controlled environment</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Renewal Notice */}
-          {daysRemaining <= 30 && (
-            <Card className="border-yellow-200 bg-yellow-50/50">
-              <CardHeader>
-                <CardTitle className="text-yellow-800 flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5" />
-                  Renewal Notice
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-yellow-700">
-                <p className="mb-3">
-                  Your membership will expire in {daysRemaining} days. To avoid interruption in service, 
-                  please contact our admin team for renewal.
-                </p>
-                <Button variant="outline" className="border-yellow-300 text-yellow-800 hover:bg-yellow-100">
-                  Contact Admin for Renewal
-                </Button>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
