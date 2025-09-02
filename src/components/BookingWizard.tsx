@@ -21,7 +21,7 @@ interface BookingWizardProps {
 interface Seat {
   id: string;
   seat_number: number;
-  type: string;
+  created_at: string;
 }
 
 interface SeatStatus {
@@ -229,7 +229,12 @@ export const BookingWizard = ({
             start_time: fromDate.toISOString(),
             end_time: toDate.toISOString(),
             status: 'pending',
-            payment_status: 'pending'
+            payment_status: 'pending',
+            seat_category: 'fixed', // Default for old booking system
+            duration_months: 1,
+            monthly_cost: 0,
+            membership_start_date: fromDate.toISOString().split('T')[0],
+            membership_end_date: toDate.toISOString().split('T')[0],
           });
 
         if (bookingError) throw bookingError;
