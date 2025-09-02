@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { User, Phone, Mail, MessageCircle, Calendar, Clock, MapPin, Edit, Download } from 'lucide-react';
+import { User, Phone, Mail, MessageCircle, Calendar, Clock, MapPin, Edit, Download, LogOut } from 'lucide-react';
 import { generateInvoicePDF } from '@/utils/pdfGenerator';
 
 interface UserProfile {
@@ -123,7 +123,7 @@ export default function Profile() {
           const daysRemaining = validityTo ? Math.ceil((new Date(validityTo).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null;
           
           setCurrentSeat({
-            seat_number: currentBooking.seats.seat_number,
+            seat_number: 0,
             type: currentBooking.type,
             validity_to: validityTo,
             days_remaining: daysRemaining,
@@ -247,14 +247,12 @@ export default function Profile() {
           <h1 className="text-2xl font-bold text-primary">Profile</h1>
           <p className="text-muted-foreground">Manage your account and view history</p>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleSignOut}>
-          Sign Out
-        </Button>
+        
       </header>
 
       {/* Account Status & Current Seat */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
+      <div className="w-full">
+        <Card className="w-full">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Account Status</span>
@@ -271,40 +269,8 @@ export default function Profile() {
             </CardContent>
           )}
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Current Allocated Seat
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {currentSeat ? (
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Seat {currentSeat.seat_number}</span>
-                  <Badge variant="outline">{currentSeat.type}</Badge>
-                </div>
-                {currentSeat.validity_to && (
-                  <div className="text-sm">
-                    <p className={`font-medium ${currentSeat.is_expired ? 'text-red-600' : currentSeat.days_remaining <= 7 ? 'text-yellow-600' : 'text-green-600'}`}>
-                      {currentSeat.is_expired ? 'Expired' : 
-                       currentSeat.days_remaining <= 0 ? 'Expires today' :
-                       `${currentSeat.days_remaining} days remaining`}
-                    </p>
-                    <p className="text-muted-foreground">
-                      Valid until: {new Date(currentSeat.validity_to).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">No current seat allocation</p>
-            )}
-          </CardContent>
-        </Card>
       </div>
+
 
       {/* Profile Information */}
       <Card>
@@ -561,6 +527,15 @@ export default function Profile() {
           )}
         </CardContent>
       </Card>
+      <Button
+          variant="destructive"
+          size="lg"
+          className="w-full font-semibold shadow-md hover:shadow-lg transition flex items-center justify-center gap-2"
+          onClick={handleSignOut}
+        >
+          <LogOut className="h-4 w-4" />  {/* smaller icon */}
+          Sign Out
+      </Button>
     </div>
   );
 }
