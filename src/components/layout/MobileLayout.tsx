@@ -1,16 +1,15 @@
-import { ReactNode } from 'react';
 import { BottomNavigation } from './BottomNavigation';
 
 interface MobileLayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export const MobileLayout = ({ children }: MobileLayoutProps) => {
   return (
     <div className="min-h-screen bg-background">
-      <div className="pb-16 pt-4">
+      <main className="pb-16">
         {children}
-      </div>
+      </main>
       <BottomNavigation />
     </div>
   );

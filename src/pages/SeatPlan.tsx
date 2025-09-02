@@ -10,7 +10,7 @@ import { Calendar, Clock, User } from 'lucide-react';
 interface SeatInfo {
   id: string;
   seat_number: number;
-  created_at: string;
+  type: string;
   currentBooking?: {
     user_name: string;
     slot?: string;
@@ -173,7 +173,7 @@ export default function SeatPlan() {
                 >
                   <div className="text-center">
                     <div className="font-bold text-lg">{seat.seat_number}</div>
-                    <div className="text-xs opacity-80">Seat</div>
+                    <div className="text-xs opacity-80">{seat.type}</div>
                   </div>
                 </button>
               ))}
@@ -194,8 +194,8 @@ export default function SeatPlan() {
             
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="font-medium">Seat Number:</span>
-                <Badge variant="outline">#{selectedSeat.seat_number}</Badge>
+                <span className="font-medium">Type:</span>
+                <Badge variant="outline">{selectedSeat.type}</Badge>
               </div>
               
               <div className="flex justify-between items-center">
