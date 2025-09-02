@@ -120,7 +120,7 @@ export default function Home() {
           .eq('user_id', profile.id)
           .order('created_at', { ascending: false })
           .limit(5);
-
+        console.log(bookings);
         const formattedBookings: RecentBooking[] = bookings?.map(booking => ({
           id: booking.id,
           seat_number: booking.seats?.seat_number || 0,
