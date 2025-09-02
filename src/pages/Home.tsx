@@ -133,7 +133,7 @@ export default function Home() {
           payment_status: booking.payment_status,
           created_at: booking.created_at,
         })) || [];
-
+        console.log(formattedBookings);
         setRecentBookings(formattedBookings);
       }
     } catch (error) {
