@@ -45,7 +45,6 @@ interface RecentBooking {
   status: string;
   payment_status: string;
   created_at: string;
-  seat_category?: string;   
 }
 
 export default function Home() {
@@ -114,25 +113,25 @@ export default function Home() {
             status,
             payment_status,
             created_at,
+            seat_category,
             seats (seat_number)
           `)
           .eq('user_id', profile.id)
           .order('created_at', { ascending: false })
           .limit(5);
 
-          const formattedBookings: RecentBooking[] = bookings?.map(booking => ({
-            id: booking.id,
-            seat_number: booking.seats?.seat_number || 0,
-            type: booking.type,
-            slot: booking.slot,
-            seat_category: booking.seat_category,   // add this
-            start_time: booking.start_time,
-            end_time: booking.end_time,
-            status: booking.status,
-            payment_status: booking.payment_status,
-            created_at: booking.created_at,
-          })) || [];
-
+        const formattedBookings: RecentBooking[] = bookings?.map(booking => ({
+          id: booking.id,
+          seat_number: booking.seats?.seat_number || 0,
+          type: booking.type,
+          slot: booking.slot,
+          start_time: booking.start_time,
+          end_time: booking.end_time,
+          seat_category: booking.seat_category,
+          status: booking.status,
+          payment_status: booking.payment_status,
+          created_at: booking.created_at,
+        })) || [];
 
         setRecentBookings(formattedBookings);
       }
@@ -306,88 +305,82 @@ export default function Home() {
         </Button>
       </div>
 
-      {/* Recent Bookings */}
-      {recentBookings.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold">Recent Bookings</h2>
-          <div className="space-y-3">
-            {recentBookings.map((booking) => (
-              <Card key={booking.id}>
-                <CardContent className="pt-4">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <div className="p-4 border rounded-xl shadow-sm bg-white space-y-3">
-  {/* Seat Info + Seat Type Badge */}
-  <div className="flex items-center justify-between">
-    <span className="font-semibold text-lg">
-      {booking.seat_category === "floating"
-        ? "Any Available Seat"
-        : `Seat ${booking.seat_number}`}
-    </span>
-    <span
-      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-        booking.seat_category === "floating"
-          ? "bg-blue-100 text-blue-800"
-          : "bg-green-100 text-green-800"
-      }`}
-    >
-      {booking.seat_category === "floating" ? "Floating" : "Fixed"}
-    </span>
+{/* Recent Bookings */}
+{recentBookings.length > 0 && (
+  <div className="space-y-4">
+    <h2 className="text-xl font-bold">Recent Bookings</h2>
+    <div className="space-y-3">
+      {recentBookings.map((booking) => (
+        <Card key={booking.id} className="w-full">
+          <CardContent className="pt-4">
+            <div className="flex justify-between items-start">
+              {/* Booking Info */}
+              <div className="space-y-2">
+                {/* Seat Details */}
+                <div className="font-medium text-base">
+                  {booking.seat_category?.toLowerCase() === "floating"
+                    ? "Any Available Seat"
+                    : `Seat ${booking.seat_number || "-"}`}
+                </div>
+
+                {/* Category + Duration + Slot */}
+                <div className="flex flex-wrap gap-2">
+                  <Badge
+                    className={`px-3 py-1 text-sm font-semibold rounded-full ${
+                      booking.seat_category?.toLowerCase() === "floating"
+                        ? "bg-blue-500 text-white"
+                        : "bg-green-500 text-white"
+                    }`}
+                  >
+                    {booking.seat_category?.toLowerCase() === "floating"
+                      ? "Floating Seat"
+                      : "Fixed Seat"}
+                  </Badge>             
+                </div>
+
+                {/* Dates */}
+                <div className="text-sm text-muted-foreground">
+                  {format(new Date(booking.start_time), "MMM d, yyyy")} –{" "}
+                  {format(new Date(booking.end_time), "MMM d, yyyy")}
+                </div>
+
+                {/* Created At */}
+                <div className="text-xs text-muted-foreground">
+                  Booked on{" "}
+                  {format(new Date(booking.created_at), "MMM d, yyyy")}
+                </div>
+              </div>
+
+              {/* Status + Payment */}
+              <div className="flex flex-col gap-2 items-end">
+                <Badge
+                  variant={
+                    booking.status === "confirmed"
+                      ? "default"
+                      : booking.status === "pending"
+                      ? "secondary"
+                      : "destructive"
+                  }
+                >
+                  {booking.status.charAt(0).toUpperCase() +
+                    booking.status.slice(1)}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {booking.payment_status === "paid"
+                    ? "Paid"
+                    : booking.payment_status === "pending"
+                    ? "Payment Pending"
+                    : "Payment Failed"}
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   </div>
+)}
 
-  {/* Price + Booking Type */}
-  <div className="text-sm text-muted-foreground">
-    {booking.seat_category === "floating" ? "₹2200 / month" : "₹3300 / month"}
-  </div>
-  <div className="text-sm font-medium">
-    {booking.type === "24hr" ? "24 Hour Access" : "12 Hour Access"}{" "}
-    {booking.slot && booking.slot !== "full" && (
-      <span className="text-muted-foreground">
-        ({booking.slot === "day" ? "Day Time" : "Night Time"})
-      </span>
-    )}
-  </div>
-
-  {/* Payment Status Badge */}
-  <div>
-    {(() => {
-      const status = booking.payment_status?.toLowerCase();
-      let statusLabel = "Payment Failed";
-      let statusClasses = "bg-red-100 text-red-700";
-
-      if (status === "paid" || status === "success") {
-        statusLabel = "Paid";
-        statusClasses = "bg-green-100 text-green-700";
-      } else if (status === "pending") {
-        statusLabel = "Pending";
-        statusClasses = "bg-yellow-100 text-yellow-700";
-      }
-
-      return (
-        <span
-          className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses}`}
-        >
-          {statusLabel}
-        </span>
-      );
-    })()}
-  </div>
-
-  {/* Dates */}
-  <div className="text-xs text-muted-foreground">
-    {new Date(booking.start_time).toLocaleDateString()} →{" "}
-    {new Date(booking.end_time).toLocaleDateString()}
-  </div>
-</div>
-
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
 
       {showBookingWizard && (
         <NewMembershipBookingWizard
