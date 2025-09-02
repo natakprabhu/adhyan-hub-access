@@ -120,7 +120,7 @@ export default function Home() {
           .eq('user_id', profile.id)
           .order('created_at', { ascending: false })
           .limit(5);
-
+        
         const formattedBookings: RecentBooking[] = bookings?.map(booking => ({
           id: booking.id,
           seat_number: booking.seats?.seat_number || 0,
@@ -133,7 +133,7 @@ export default function Home() {
           payment_status: booking.payment_status,
           created_at: booking.created_at,
         })) || [];
-
+       
         setRecentBookings(formattedBookings);
       }
     } catch (error) {
@@ -320,7 +320,7 @@ export default function Home() {
               <div className="space-y-2">
                 {/* Seat Details */}
                 <div className="font-medium text-base">
-                  {booking.type?.toLowerCase() === "floating"
+                  {booking.seat_category?.toLowerCase() === "floating"
                     ? "Any Available Seat"
                     : `Seat ${booking.seat_number || "-"}`}
                 </div>
@@ -329,15 +329,15 @@ export default function Home() {
                 <div className="flex flex-wrap gap-2">
                   <Badge
                     className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                      booking.type?.toLowerCase() === "floating"
+                      booking.seat_category?.toLowerCase() === "floating"
                         ? "bg-blue-500 text-white"
                         : "bg-green-500 text-white"
                     }`}
                   >
-                    {booking.type?.toLowerCase() === "floating"
+                    {booking.seat_category?.toLowerCase() === "floating"
                       ? "Floating Seat"
                       : "Fixed Seat"}
-                  </Badge>
+                  </Badge>             
                 </div>
 
                 {/* Dates */}

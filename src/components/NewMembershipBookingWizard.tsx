@@ -91,69 +91,72 @@ const checkSeatAvailability = async (seatNumber: number) => {
   };
 
   const handleBooking = async () => {
-    if (!userProfile || !selectedCategory) return;
+  if (!userProfile || !selectedCategory) return;
 
-    setIsLoading(true);
-    try {
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + duration);
-
-      let seatId = null;
-      if (selectedCategory === 'fixed' && selectedSeat) {
-        const { data: seatData } = await supabase
-          .from('seats')
-          .select('id')
-          .eq('seat_number', selectedSeat)
-          .single();
-        seatId = seatData?.id;
-      }
-
-      const bookingData = {
-        user_id: userProfile.id,
-        seat_id: seatId,
-        seat_category: selectedCategory,
-        duration_months: duration,
-        monthly_cost: calculateMonthlyCost(),
-        membership_start_date: startDate.toISOString().split('T')[0],
-        membership_end_date: endDate.toISOString().split('T')[0],
-        start_time: startDate.toISOString(),
-        end_time: endDate.toISOString(),
-        type: 'membership',
-        status: 'pending',
-        payment_status: 'pending',
-        description: `${selectedCategory === 'fixed' ? 'Fixed' : 'Floating'} seat membership for ${duration} month${duration > 1 ? 's' : ''}`,
-      };
-
-      const { error } = await supabase.from('bookings').insert(bookingData);
-
-      if (error) throw error;
-
-      toast({
-        title: "Request Submitted",
-        description: "Admin will send you payment link soon, kindly complete the payment and receipt will be shared on email.",
-      });
-
-      onBookingComplete();
-      onClose();
-    } catch (error) {
-      console.error('Error creating booking:', error);
-      toast({
-        title: "Error",
-        description: "Failed to submit booking request",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+  setIsLoading(true);
+  try {
+    // Use the correct start date
+    let startDate: Date;
+    if (selectedCategory === 'fixed' && seatAvailability?.next_available_date) {
+      startDate = new Date(seatAvailability.next_available_date);
+    } else {
+      startDate = new Date(); // fallback for floating
     }
-  };
 
+    // Calculate end date based on duration
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + duration);
+
+    let seatId = null;
+    if (selectedCategory === 'fixed' && selectedSeat) {
+      const { data: seatData } = await supabase
+        .from('seats')
+        .select('id')
+        .eq('seat_number', selectedSeat)
+        .single();
+      seatId = seatData?.id;
+    }
+
+    const bookingData = {
+      user_id: userProfile.id,
+      seat_id: seatId,
+      seat_category: selectedCategory,
+      duration_months: duration,
+      monthly_cost: calculateMonthlyCost(),
+      membership_start_date: startDate.toISOString().split('T')[0],
+      membership_end_date: endDate.toISOString().split('T')[0],
+      start_time: startDate.toISOString(),
+      end_time: endDate.toISOString(),
+      type: 'membership',
+      status: 'pending',
+      payment_status: 'pending',
+      description: `${selectedCategory === 'fixed' ? 'Fixed' : 'Floating'} seat membership for ${duration} month${duration > 1 ? 's' : ''}`,
+    };
+
+    const { error } = await supabase.from('bookings').insert(bookingData);
+
+    if (error) throw error;
+
+    // Set a success message in the wizard itself (instead of toaster)
+    setStep(5); // move to confirmation step
+
+  } catch (error) {
+    console.error('Error creating booking:', error);
+    toast({
+      title: "Error",
+      description: "Failed to submit booking request",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const nextStep = async () => {
     if (step === 1 && selectedCategory) {
       setStep(2);
     } else if (step === 2 && selectedCategory === 'floating') {
-      setStep(4); // Skip seat selection for floating
+      setStep(3); // Skip seat selection for floating
     } else if (step === 2 && selectedCategory === 'fixed') {
       setStep(3);
     } else if (step === 3 && selectedSeat) {
@@ -550,30 +553,31 @@ console.log("Membership End Date:", endDate.toISOString());
   </div>
 )}
 
-          {/* Step 5: Confirmation Message */}
           {step === 5 && (
-            <div className="space-y-6">
-              <div className="text-center space-y-4">
-                <CheckCircle className="h-20 w-20 mx-auto text-green-500" />
-                <h3 className="text-2xl font-bold text-green-700">Request Submitted Successfully!</h3>
-                <div className="max-w-lg mx-auto">
-                  <Card className="bg-green-50 border-green-200">
-                    <CardContent className="pt-6 text-center space-y-3">
-                      <p className="text-green-800 font-medium">
-                        Admin will send you payment link soon.
-                      </p>
-                      <p className="text-green-700 text-sm">
-                        Kindly complete the payment and receipt will be shared on email.
-                      </p>
-                      <p className="text-green-700 text-sm">
-                        You will receive further instructions via email once your booking is processed.
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
+            <div className="space-y-6 text-center">
+              <CheckCircle className="h-20 w-20 mx-auto text-green-500" />
+              <h3 className="text-2xl font-bold text-green-700">Your request has been submitted successfully!</h3>
+              <p className="text-base text-muted-foreground mt-2">
+                Please complete the UPI payment to <span className="font-mono font-bold" id="upi-number">9899366722</span> (Receiver Name: Gurpreet Kaur).<br />
+                Once the payment is made, the receipt will be updated in your profile within 15 minutes.<br /><br />
+                Thank you!
+              </p>
+          
+              <Button
+                onClick={() => {
+                  navigator.clipboard.writeText("9899366722");
+                }}
+                className="mt-4"
+              >
+                Copy UPI Number
+              </Button>
+          
+              <div className="pt-6">
+                <Button onClick={onClose} variant="default">Close</Button>
               </div>
             </div>
           )}
+
 
           {/* Navigation Buttons */}
           <div className="flex justify-between pt-6">
