@@ -338,6 +338,7 @@ export default function Home() {
                       ? "Floating Seat"
                       : "Fixed Seat"}
                   </Badge>
+
                 </div>
 
                 {/* Dates */}
