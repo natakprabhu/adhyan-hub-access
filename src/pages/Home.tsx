@@ -320,7 +320,6 @@ export default function Home() {
               <div className="space-y-2">
                 {/* Seat Details */}
                 <div className="font-medium text-base">
-                  {console.log(booking);}
                   {booking.seat_category?.toLowerCase() === "floating"
                     ? "Any Available Seat"
                     : `Seat ${booking.seat_number || "-"}`}
@@ -338,8 +337,7 @@ export default function Home() {
                     {booking.seat_category?.toLowerCase() === "floating"
                       ? "Floating Seat"
                       : "Fixed Seat"}
-                  </Badge>
-
+                  </Badge>             
                 </div>
 
                 {/* Dates */}
