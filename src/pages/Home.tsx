@@ -46,6 +46,7 @@ interface RecentBooking {
   status: string;
   payment_status: string;
   created_at: string;
+  seat_category: string;
 }
 
 export default function Home() {
