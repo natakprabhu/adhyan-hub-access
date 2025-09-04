@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import NewMembershipBookingWizard from '@/components/NewMembershipBookingWizard';
+import { BookingWizard } from '@/components/BookingWizard';
 import { 
   Users, 
   MapPin, 
@@ -17,11 +17,10 @@ import {
   Droplets, 
   Volume2, 
   Lock, 
-  Crown,
+  Moon,
   Armchair
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { RulesModal } from '@/components/RulesModal';
 
 interface UserProfile {
   id: string;
@@ -46,7 +45,6 @@ interface RecentBooking {
   status: string;
   payment_status: string;
   created_at: string;
-  seat_category: string;
 }
 
 export default function Home() {
@@ -115,13 +113,12 @@ export default function Home() {
             status,
             payment_status,
             created_at,
-            seat_category,
             seats (seat_number)
           `)
           .eq('user_id', profile.id)
           .order('created_at', { ascending: false })
           .limit(5);
-        
+
         const formattedBookings: RecentBooking[] = bookings?.map(booking => ({
           id: booking.id,
           seat_number: booking.seats?.seat_number || 0,
@@ -129,12 +126,11 @@ export default function Home() {
           slot: booking.slot,
           start_time: booking.start_time,
           end_time: booking.end_time,
-          seat_category: booking.seat_category,
           status: booking.status,
           payment_status: booking.payment_status,
           created_at: booking.created_at,
         })) || [];
-       
+
         setRecentBookings(formattedBookings);
       }
     } catch (error) {
@@ -161,13 +157,18 @@ export default function Home() {
   }
 
   return (
-    <div className="bg-background p-4 space-y-8">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-primary">Welcome to Adhyan Library</h1>
-        <p className="text-muted-foreground">
-          Hello, {userProfile?.name || 'Loading...'}!
-        </p>
-      </div>
+    <div className="min-h-screen bg-background p-4 space-y-8">
+      <header className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-primary">Welcome to Adhyan Library</h1>
+          <p className="text-muted-foreground">
+            Hello, {userProfile?.name || 'Loading...'}!
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={handleSignOut}>
+          Sign Out
+        </Button>
+      </header>
 
       {userProfile && !userProfile.approved && (
         <Card className="border-amber-200 bg-amber-50">
@@ -179,38 +180,35 @@ export default function Home() {
         </Card>
       )}
 
-      {/* Membership Plans */}
+      {/* Pricing Plans */}
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-center">Our Membership Plans</h2>
+        <h2 className="text-2xl font-bold text-center">Our Plans</h2>
         <div className="grid md:grid-cols-2 gap-6">
           <Card className="relative">
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Floating Seat
-                </CardTitle>
-                <Badge variant="secondary">Flexible</Badge>
+                <CardTitle>12 Hour Plan</CardTitle>
+                <Badge variant="secondary">Popular</Badge>
               </div>
-              <div className="text-3xl font-bold">₹2,200<span className="text-sm font-normal">/month</span></div>
+              <div className="text-3xl font-bold">₹2,300<span className="text-sm font-normal">/month</span></div>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-primary" />
-                  24×7 access anytime
+                  Choose Day (9 AM - 9 PM) or Night (9 PM - 9 AM)
                 </li>
                 <li className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-primary" />
-                  Any available seat (1-50)
+                  Seats 14-50 available
                 </li>
                 <li className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-primary" />
-                  First come, first served
+                  Flexible timing options
                 </li>
                  <li className="flex items-center gap-2">
-                   <Lock className="h-4 w-4 text-muted-foreground" />
-                   <span className="line-through text-muted-foreground">Personal Locker</span>
+                   <Lock className="h-4 w-4 text-primary" />
+                   <span className="line-through">Permanent Locker</span>
                  </li>
               </ul>
             </CardContent>
@@ -219,31 +217,28 @@ export default function Home() {
           <Card className="relative border-primary">
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle className="flex items-center gap-2">
-                  <Crown className="h-5 w-5" />
-                  Fixed Seat
-                </CardTitle>
+                <CardTitle>24 Hour Plan</CardTitle>
                 <Badge>Premium</Badge>
               </div>
-              <div className="text-3xl font-bold">₹3,300<span className="text-sm font-normal">/month</span></div>
+              <div className="text-3xl font-bold">₹3,800<span className="text-sm font-normal">/month</span></div>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-primary" />
-                  24×7 access anytime
+                  <Moon className="h-4 w-4 text-primary" />
+                  24/7 access anytime
                 </li>
                 <li className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-primary" />
-                  Dedicated seat (1-50)
+                  Premium seats 1-13
                 </li>
                 <li className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-primary" />
-                  Your personal seat
+                  Unlimited study hours
                 </li>
                 <li className="flex items-center gap-2">
                   <Lock className="h-4 w-4 text-primary" />
-                  Personal locker included
+                  Double Locker and Fixed Seat
                 </li>
               </ul>
             </CardContent>
@@ -294,99 +289,90 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Seat Statistics */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Seats</CardTitle>
+            <Armchair className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{seatStats.total}</div>
+            <p className="text-xs text-muted-foreground">Library capacity</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Available</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-seat-available">{seatStats.available}</div>
+            <p className="text-xs text-muted-foreground">Ready to book</p>
+          </CardContent>
+        </Card>
+      </div>
 
-      <div className="text-center space-y-3">
+      <div className="text-center">
         <Button 
           size="lg" 
           onClick={() => setShowBookingWizard(true)}
+          disabled={!userProfile?.approved}
           className="w-full"
         >
           <Calendar className="mr-2 h-5 w-5" />
           Book a Seat
         </Button>
-        
-        <RulesModal />
       </div>
 
-{/* Recent Bookings */}
-{recentBookings.length > 0 && (
-  <div className="space-y-4">
-    <h2 className="text-xl font-bold">Recent Bookings</h2>
-    <div className="space-y-3">
-      {recentBookings.map((booking) => (
-        <Card key={booking.id} className="w-full">
-          <CardContent className="pt-4">
-            <div className="flex justify-between items-start">
-              {/* Booking Info */}
-              <div className="space-y-2">
-                {/* Seat Details */}
-                <div className="font-medium text-base">
-                  {booking.seat_category?.toLowerCase() === "floating"
-                    ? "Any Available Seat"
-                    : `Seat ${booking.seat_number || "-"}`}
-                </div>
-
-                {/* Category + Duration + Slot */}
-                <div className="flex flex-wrap gap-2">
-                  <Badge
-                    className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                      booking.seat_category?.toLowerCase() === "floating"
-                        ? "bg-blue-500 text-white"
-                        : "bg-green-500 text-white"
-                    }`}
-                  >
-                    {booking.seat_category?.toLowerCase() === "floating"
-                      ? "Floating Seat"
-                      : "Fixed Seat"}
-                  </Badge>             
-                </div>
-
-                {/* Dates */}
-                <div className="text-sm text-muted-foreground">
-                  {format(new Date(booking.start_time), "MMM d, yyyy")} –{" "}
-                  {format(new Date(booking.end_time), "MMM d, yyyy")}
-                </div>
-
-                {/* Created At */}
-                <div className="text-xs text-muted-foreground">
-                  Booked on{" "}
-                  {format(new Date(booking.created_at), "MMM d, yyyy")}
-                </div>
-              </div>
-
-              {/* Status + Payment */}
-              <div className="flex flex-col gap-2 items-end">
-                <Badge
-                  variant={
-                    booking.status === "confirmed"
-                      ? "default"
-                      : booking.status === "pending"
-                      ? "secondary"
-                      : "destructive"
-                  }
-                >
-                  {booking.status.charAt(0).toUpperCase() +
-                    booking.status.slice(1)}
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {booking.payment_status === "paid"
-                    ? "Paid"
-                    : booking.payment_status === "pending"
-                    ? "Payment Pending"
-                    : "Payment Failed"}
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  </div>
-)}
-
+      {/* Recent Bookings */}
+      {recentBookings.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold">Recent Bookings</h2>
+          <div className="space-y-3">
+            {recentBookings.map((booking) => (
+              <Card key={booking.id}>
+                <CardContent className="pt-4">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <div className="font-medium">
+                        Seat {booking.seat_number} • {booking.type === '24hr' ? '24 Hour' : '12 Hour'}
+                        {booking.slot && booking.slot !== 'full' && (
+                          <span className="text-muted-foreground ml-1">
+                            ({booking.slot === 'day' ? 'Day Time' : 'Night Time'})
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {format(new Date(booking.start_time), 'MMM yyyy')} - {format(new Date(booking.end_time), 'MMM yyyy')}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Booked on {format(new Date(booking.created_at), 'MMM d, yyyy')}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant={
+                        booking.status === 'confirmed' ? 'default' :
+                        booking.status === 'pending' ? 'secondary' : 'destructive'
+                      }>
+                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {booking.payment_status === 'completed' ? 'Paid' : 
+                         booking.payment_status === 'pending' ? 'Payment Pending' : 'Payment Failed'}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showBookingWizard && (
-        <NewMembershipBookingWizard
+        <BookingWizard
           isOpen={showBookingWizard}
           onClose={() => setShowBookingWizard(false)}
           onBookingComplete={fetchData}

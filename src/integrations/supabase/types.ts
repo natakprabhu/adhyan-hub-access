@@ -94,19 +94,13 @@ export type Database = {
           admin_notes: string | null
           created_at: string
           description: string | null
-          duration_months: number | null
           end_time: string
           id: string
-          membership_end_date: string | null
-          membership_start_date: string | null
-          monthly_cost: number | null
           payment_screenshot_url: string | null
           payment_status: string | null
           receipt_sent: boolean | null
           receipt_sent_at: string | null
-          seat_category: string
-          seat_id: string | null
-          seat_number: number | null
+          seat_id: string
           slot: string | null
           start_time: string
           status: string | null
@@ -118,19 +112,13 @@ export type Database = {
           admin_notes?: string | null
           created_at?: string
           description?: string | null
-          duration_months?: number | null
           end_time: string
           id?: string
-          membership_end_date?: string | null
-          membership_start_date?: string | null
-          monthly_cost?: number | null
           payment_screenshot_url?: string | null
           payment_status?: string | null
           receipt_sent?: boolean | null
           receipt_sent_at?: string | null
-          seat_category: string
-          seat_id?: string | null
-          seat_number?: number | null
+          seat_id: string
           slot?: string | null
           start_time: string
           status?: string | null
@@ -142,19 +130,13 @@ export type Database = {
           admin_notes?: string | null
           created_at?: string
           description?: string | null
-          duration_months?: number | null
           end_time?: string
           id?: string
-          membership_end_date?: string | null
-          membership_start_date?: string | null
-          monthly_cost?: number | null
           payment_screenshot_url?: string | null
           payment_status?: string | null
           receipt_sent?: boolean | null
           receipt_sent_at?: string | null
-          seat_category?: string
-          seat_id?: string | null
-          seat_number?: number | null
+          seat_id?: string
           slot?: string | null
           start_time?: string
           status?: string | null
@@ -179,60 +161,30 @@ export type Database = {
           },
         ]
       }
-      membership_rules: {
-        Row: {
-          content: string
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          rule_order: number | null
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          content: string
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          rule_order?: number | null
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          content?: string
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          rule_order?: number | null
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       seats: {
         Row: {
           created_at: string
           id: string
           seat_number: number
+          type: string
         }
         Insert: {
           created_at?: string
           id?: string
           seat_number: number
+          type: string
         }
         Update: {
           created_at?: string
           id?: string
           seat_number?: number
+          type?: string
         }
         Relationships: []
       }
       transactions: {
         Row: {
-          admin_screenshot_url: string | null
           amount: number
-          approved_at: string | null
-          approved_by_admin: string | null
           booking_id: string | null
           created_at: string
           id: string
@@ -240,10 +192,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          admin_screenshot_url?: string | null
           amount: number
-          approved_at?: string | null
-          approved_by_admin?: string | null
           booking_id?: string | null
           created_at?: string
           id?: string
@@ -251,10 +200,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          admin_screenshot_url?: string | null
           amount?: number
-          approved_at?: string | null
-          approved_by_admin?: string | null
           booking_id?: string | null
           created_at?: string
           id?: string
@@ -262,13 +208,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "transactions_approved_by_admin_fkey"
-            columns: ["approved_by_admin"]
-            isOneToOne: false
-            referencedRelation: "admin_users"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "transactions_booking_id_fkey"
             columns: ["booking_id"]
@@ -371,18 +310,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      check_seat_availability: {
-        Args: {
-          end_date_param: string
-          seat_number_param: number
-          start_date_param: string
-        }
-        Returns: {
-          conflicting_booking_end: string
-          is_available: boolean
-          next_available_date: string
-        }[]
-      }
       cleanup_expired_bookings: {
         Args: Record<PropertyKey, never>
         Returns: undefined
