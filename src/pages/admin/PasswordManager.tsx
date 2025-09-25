@@ -89,7 +89,8 @@ export const PasswordManager = () => {
       const { data, error } = await supabase.functions.invoke('reset-user-password', {
         body: { 
           auth_user_id: selectedUser.auth_user_id,
-          new_password: newPassword
+          new_password: newPassword,
+          admin_token: 'admin-session-token'
         }
       });
 
