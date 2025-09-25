@@ -14,6 +14,7 @@ import { LogOut, Upload, Send } from 'lucide-react';
 import { UsersManagement } from './UsersManagement';
 import { BiometricManagement } from './BiometricManagement';
 import { GanttChart } from './GanttChart';
+import { PasswordManager } from './PasswordManager';
 
 interface Booking {
   id: string;
@@ -268,6 +269,7 @@ export const AdminDashboard = () => {
             <TabsTrigger value="users">All Users</TabsTrigger>
             <TabsTrigger value="biometric">Biometric Management</TabsTrigger>
             <TabsTrigger value="gantt">Seat Schedule</TabsTrigger>
+            <TabsTrigger value="password">Password Manager</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-4">
@@ -496,6 +498,10 @@ export const AdminDashboard = () => {
 
           <TabsContent value="gantt">
             <GanttChart />
+          </TabsContent>
+
+          <TabsContent value="password">
+            <PasswordManager />
           </TabsContent>
         </Tabs>
       </div>
