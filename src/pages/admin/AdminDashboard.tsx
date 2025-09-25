@@ -30,15 +30,16 @@ interface Booking {
   receipt_sent: boolean;
   seat_id: string;
   user_id: string;
+  seat_number?: number;
   users: {
     name: string;
     email: string;
     validity_from?: string;
     validity_to?: string;
   };
-  seats: {
+  seats?: {
     seat_number: number;
-  };
+  } | null;
 }
 
 export const AdminDashboard = () => {
@@ -280,7 +281,7 @@ export const AdminDashboard = () => {
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <CardTitle className="text-base">
-                          {booking.users.name} - Seat {booking.seats.seat_number}
+                          {booking.users.name} - Seat {booking.seats?.seat_number || booking.seat_number || 'N/A'}
                         </CardTitle>
                         <CardDescription className="text-sm">
                           {booking.type} {booking.slot && `(${booking.slot})`}
