@@ -5,14 +5,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { Eye, EyeOff } from 'lucide-react';
+import SignupSuccess from '@/components/SignupSuccess';
 
 export default function Auth() {
   const { user, loading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showSuccessPage, setShowSuccessPage] = useState(false);
 
   if (loading) {
     return (
@@ -24,6 +30,10 @@ export default function Auth() {
 
   if (user) {
     return <Navigate to="/home" replace />;
+  }
+
+  if (showSuccessPage) {
+    return <SignupSuccess />;
   }
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -50,46 +60,45 @@ export default function Auth() {
     setIsLoading(false);
   };
 
-  const handleGoogleAuth = async () => {
-    setIsLoading(true);
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-      },
-    });
-
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-    }
-  };
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    if (password !== confirmPassword) {
+      toast({
+        title: 'Error',
+        description: 'Passwords do not match',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: 'Error',
+        description: 'Password must be at least 6 characters long',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const name = formData.get('name') as string;
     const phone = formData.get('phone') as string;
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const telegram_id = formData.get('telegram_id') as string;
+    
+    // Generate dummy email using phone number
+    const dummyEmail = `${phone}@noemail.supabase`;
 
     const { error } = await supabase.auth.signUp({
-      email,
+      email: dummyEmail,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/`,
         data: {
           name,
           phone,
-          telegram_id,
         },
       },
     });
@@ -100,14 +109,10 @@ export default function Auth() {
         description: error.message,
         variant: 'destructive',
       });
+      setIsLoading(false);
     } else {
-      toast({
-        title: 'Check Your Email',
-        description: 'Please click the confirmation link sent to your email to complete registration.',
-      });
+      setShowSuccessPage(true);
     }
-
-    setIsLoading(false);
   };
 
   return (
@@ -133,22 +138,6 @@ export default function Auth() {
             
             <TabsContent value="signin">
               <div className="space-y-4">
-                <Button 
-                  onClick={handleGoogleAuth}
-                  variant="outline"
-                  className="w-full h-12" 
-                  disabled={isLoading}
-                >
-                  Continue with Google
-                </Button>
-                
-                <div className="relative">
-                  <Separator className="my-4" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="bg-background px-2 text-muted-foreground text-sm">or</span>
-                  </div>
-                </div>
-                
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
@@ -193,22 +182,6 @@ export default function Auth() {
             
             <TabsContent value="signup">
               <div className="space-y-4">
-                <Button 
-                  onClick={handleGoogleAuth}
-                  variant="outline"
-                  className="w-full h-12" 
-                  disabled={isLoading}
-                >
-                  Continue with Google
-                </Button>
-                
-                <div className="relative">
-                  <Separator className="my-4" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="bg-background px-2 text-muted-foreground text-sm">or</span>
-                  </div>
-                </div>
-                
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
@@ -233,36 +206,51 @@ export default function Auth() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      required
-                      className="h-12"
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      placeholder="Create a password"
-                      required
-                      className="h-12"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Create a password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="h-12 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="telegram_id">Telegram ID (Optional)</Label>
-                    <Input
-                      id="telegram_id"
-                      name="telegram_id"
-                      type="text"
-                      placeholder="@your_telegram_id"
-                      className="h-12"
-                    />
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirm your password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        className="h-12 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
+                    {confirmPassword && password !== confirmPassword && (
+                      <p className="text-sm text-destructive">Passwords do not match</p>
+                    )}
                   </div>
                   <Button 
                     type="submit" 
