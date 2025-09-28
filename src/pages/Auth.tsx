@@ -91,11 +91,11 @@ export default function Auth() {
     // Generate dummy email using phone number
     const dummyEmail = `${phone}@noemail.supabase`;
 
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email: dummyEmail,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}/home`,
         data: {
           name,
           phone,
@@ -111,7 +111,11 @@ export default function Auth() {
       });
       setIsLoading(false);
     } else {
-      setShowSuccessPage(true);
+      // Wait a moment for auth state to update, then show success page
+      setTimeout(() => {
+        setShowSuccessPage(true);
+        setIsLoading(false);
+      }, 500);
     }
   };
 
