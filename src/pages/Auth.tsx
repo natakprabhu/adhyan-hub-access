@@ -41,11 +41,14 @@ export default function Auth() {
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
+    const phone = formData.get('phone') as string;
     const password = formData.get('password') as string;
 
+    // Generate dummy email using phone number (same as signup)
+    const dummyEmail = `${phone}@noemail.supabase`;
+
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: dummyEmail,
       password,
     });
 
@@ -144,12 +147,12 @@ export default function Auth() {
               <div className="space-y-4">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="phone">Phone Number</Label>
                     <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="Enter your email"
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      placeholder="Enter your phone number"
                       required
                       className="h-12"
                     />
@@ -177,7 +180,7 @@ export default function Auth() {
                 <div className="mt-6 p-4 bg-muted rounded-2xl">
                   <h4 className="font-medium text-sm mb-2">Test Credentials</h4>
                   <div className="text-xs text-muted-foreground space-y-1">
-                    <div>Email: test@adhyanlibrary.com</div>
+                    <div>Phone: 1234567890</div>
                     <div>Password: password123</div>
                   </div>
                 </div>
