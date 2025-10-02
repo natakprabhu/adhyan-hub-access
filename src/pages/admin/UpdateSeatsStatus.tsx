@@ -1,74 +1,104 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RefreshCw } from 'lucide-react';
 
 interface SeatStatus {
   id: string;
   seat_number: number;
   status: string;
-  updated_at: string;
   seat_id: string | null;
   booking_id: string | null;
+  updated_at: string;
 }
 
 export default function UpdateSeatsStatus() {
-  const [seats, setSeats] = useState<SeatStatus[]>([]);
+  const [seatsStatus, setSeatsStatus] = useState<SeatStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const { toast } = useToast();
 
-  const fetchSeats = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('seats_status')
-      .select('*')
-      .order('seat_number');
+  const fetchSeatsStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('seats_status')
+        .select('*')
+        .order('seat_number');
 
-    if (error) {
-      toast.error('Failed to load seats status');
-      console.error(error);
-    } else {
-      setSeats(data || []);
+      if (error) throw error;
+      setSeatsStatus(data || []);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const syncSeatsStatus = async () => {
+  const syncWithBookings = async () => {
     setSyncing(true);
-    const { error } = await supabase.rpc('sync_seats_status');
-
-    if (error) {
-      toast.error('Failed to sync seats status');
-      console.error(error);
-    } else {
-      toast.success('Seats status synced successfully');
-      await fetchSeats();
+    try {
+      const { error } = await supabase.rpc('sync_seats_status');
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Success',
+        description: 'Seats status synced with bookings',
+      });
+      
+      await fetchSeatsStatus();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSyncing(false);
     }
-    setSyncing(false);
   };
 
-  const toggleSeatStatus = async (seat: SeatStatus) => {
-    const newStatus = seat.status === 'available' ? 'occupied' : 'available';
-    
-    const { error } = await supabase
-      .from('seats_status')
-      .update({ status: newStatus })
-      .eq('id', seat.id);
+  const updateSeatStatus = async (seatId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('seats_status')
+        .update({ status: newStatus })
+        .eq('id', seatId);
 
-    if (error) {
-      toast.error('Failed to update seat status');
-      console.error(error);
-    } else {
-      toast.success(`Seat ${seat.seat_number} updated to ${newStatus}`);
-      await fetchSeats();
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Seat status updated',
+      });
+
+      await fetchSeatsStatus();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
     }
   };
 
   useEffect(() => {
-    fetchSeats();
+    fetchSeatsStatus();
   }, []);
 
   if (loading) {
@@ -81,64 +111,84 @@ export default function UpdateSeatsStatus() {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Update Seats Status</h1>
+          <Button onClick={syncWithBookings} disabled={syncing}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+            Sync with Bookings
+          </Button>
+        </div>
+
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Seats Status Management</CardTitle>
-                <CardDescription>
-                  View and manage all seat statuses (1-50)
-                </CardDescription>
-              </div>
-              <Button 
-                onClick={syncSeatsStatus} 
-                disabled={syncing}
-                variant="outline"
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-                Sync with Bookings
-              </Button>
-            </div>
+            <CardTitle>All Seats (1-50)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-3">
-              {seats.map((seat) => (
-                <button
-                  key={seat.id}
-                  onClick={() => toggleSeatStatus(seat)}
-                  className="relative aspect-square rounded-lg border-2 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary"
-                  style={{
-                    backgroundColor: seat.status === 'occupied' 
-                      ? 'hsl(var(--destructive))' 
-                      : 'hsl(var(--primary))',
-                    borderColor: seat.status === 'occupied'
-                      ? 'hsl(var(--destructive))'
-                      : 'hsl(var(--primary))',
-                  }}
-                >
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                    <span className="text-lg font-bold">{seat.seat_number}</span>
-                    <Badge 
-                      variant="secondary" 
-                      className="mt-1 text-xs"
-                    >
-                      {seat.status}
-                    </Badge>
-                  </div>
-                </button>
-              ))}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Seat Number</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Booking ID</TableHead>
+                    <TableHead>Last Updated</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {seatsStatus.map((seat) => (
+                    <TableRow key={seat.id}>
+                      <TableCell className="font-medium">
+                        Seat {seat.seat_number}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${
+                            seat.status === 'available'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {seat.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {seat.booking_id ? seat.booking_id.slice(0, 8) + '...' : 'N/A'}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {new Date(seat.updated_at).toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={seat.status}
+                          onValueChange={(value) => updateSeatStatus(seat.id, value)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="available">Available</SelectItem>
+                            <SelectItem value="occupied">Occupied</SelectItem>
+                            <SelectItem value="maintenance">Maintenance</SelectItem>
+                            <SelectItem value="reserved">Reserved</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-            
-            <div className="mt-6 flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-primary"></div>
-                <span>Available</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-destructive"></div>
-                <span>Occupied</span>
-              </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-muted">
+          <CardContent className="pt-6">
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p><strong>Note:</strong> This page is accessible without login for public viewing.</p>
+              <p><strong>Sync with Bookings:</strong> Updates all seat statuses based on current paid bookings.</p>
+              <p><strong>Manual Update:</strong> Admins can manually change seat status using the dropdown.</p>
             </div>
           </CardContent>
         </Card>
