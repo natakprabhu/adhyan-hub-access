@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import { AdminLogin } from "./pages/admin/AdminLogin";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { PasswordManager } from "./pages/admin/PasswordManager";
+import UpdateSeatsStatus from "./pages/admin/UpdateSeatsStatus";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/superman/login" element={<AdminLogin />} />
               <Route path="/superman/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
               <Route path="/superman/password-manager" element={<AdminProtectedRoute><PasswordManager /></AdminProtectedRoute>} />
+              <Route path="/update" element={<UpdateSeatsStatus />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
