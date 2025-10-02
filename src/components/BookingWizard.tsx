@@ -95,7 +95,13 @@ export const BookingWizard = ({
         .lte('seat_number', seatFilter.lte)
         .order('seat_number');
 
-      setSeats(seatsData || []);
+      // Add default type property to seats data
+      const seatsWithType = (seatsData || []).map(seat => ({
+        ...seat,
+        type: bookingType // Use the selected booking type
+      }));
+      
+      setSeats(seatsWithType);
 
       const seatIds = seatsData?.map(s => s.id) || [];
       
@@ -221,7 +227,7 @@ export const BookingWizard = ({
         // Create booking with Pending Payment status
         const { error: bookingError } = await supabase
           .from('bookings')
-          .insert({
+          .insert([{
             user_id: userProfile.id,
             seat_id: selectedSeat,
             type: bookingType,
@@ -230,7 +236,7 @@ export const BookingWizard = ({
             end_time: toDate.toISOString(),
             status: 'pending',
             payment_status: 'pending'
-          });
+          }] as any);
 
         if (bookingError) throw bookingError;
 

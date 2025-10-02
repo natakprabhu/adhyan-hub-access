@@ -52,6 +52,7 @@ export default function SeatPlan() {
         .from('bookings')
         .select(`
           seat_id,
+          type,
           slot,
           start_time,
           end_time,
@@ -82,6 +83,7 @@ export default function SeatPlan() {
 
         return {
           ...seat,
+          type: currentBooking?.type || '24hr', // Add type from booking or default
           currentBooking: currentBooking ? {
             user_name: currentBooking.users?.name || 'Unknown User',
             slot: currentBooking.slot,

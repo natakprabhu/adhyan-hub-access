@@ -133,7 +133,7 @@ export const UsersManagement = () => {
         .from('transactions')
         .select(`
           *,
-          bookings (
+          bookings!booking_id (
             type,
             slot,
             start_time,
@@ -145,7 +145,7 @@ export const UsersManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setUserTransactions(data || []);
+      setUserTransactions(data as any || []);
     } catch (error) {
       console.error('Error fetching user transactions:', error);
       toast({

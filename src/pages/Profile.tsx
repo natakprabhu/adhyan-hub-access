@@ -80,7 +80,7 @@ export default function Profile() {
           .from('transactions')
           .select(`
             *,
-            bookings (
+            bookings!booking_id (
               type,
               slot,
               start_time,
@@ -94,13 +94,10 @@ export default function Profile() {
         const formattedTransactions = (transactionsData || []).map(tx => ({
           ...tx,
           booking: tx.bookings,
-          bookings: tx.bookings ? {
-            ...tx.bookings,
-            id: tx.booking_id || tx.id
-          } : undefined
+          bookings: tx.bookings
         }));
 
-        setTransactions(formattedTransactions as Transaction[]);
+        setTransactions(formattedTransactions as any);
 
         // Fetch current active seat
         const now = new Date().toISOString();

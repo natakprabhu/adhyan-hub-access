@@ -145,12 +145,12 @@ export const AdminDashboard = () => {
 
           const { error: transactionError } = await supabase
             .from('transactions')
-            .insert({
+            .insert([{
               user_id: currentBooking.user_id,
               booking_id: bookingId,
               amount: amount,
               status: 'completed'
-            });
+            }] as any);
 
           if (transactionError) {
             console.error('Error creating transaction:', transactionError);
